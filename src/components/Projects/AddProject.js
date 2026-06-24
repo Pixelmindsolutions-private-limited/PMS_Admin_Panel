@@ -9,6 +9,83 @@ const STAFF_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff/options";
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;
 
+// Digital Marketing Packages
+const MARKETING_PACKAGES = {
+  basic: {
+    id: "basic",
+    name: "Basic Digital Marketing",
+    price: 15000,
+    description: "Essential digital marketing services for small businesses",
+    features: [
+      "Social Media Management (3 platforms)",
+      "Monthly Content Creation (10 posts)",
+      "Basic SEO Optimization",
+      "Google My Business Setup",
+      "Monthly Performance Report"
+    ],
+    icon: "Share2"
+  },
+  standard: {
+    id: "standard",
+    name: "Standard Digital Marketing",
+    price: 35000,
+    description: "Comprehensive digital marketing strategy for growing businesses",
+    features: [
+      "Social Media Management (5 platforms)",
+      "Monthly Content Creation (20 posts)",
+      "Advanced SEO Optimization",
+      "Google Ads Management",
+      "Facebook/Instagram Ads",
+      "Email Marketing Campaigns",
+      "Weekly Performance Reports",
+      "Competitor Analysis"
+    ],
+    icon: "TrendingUp"
+  },
+  premium: {
+    id: "premium",
+    name: "Premium Digital Marketing",
+    price: 65000,
+    description: "Full-scale digital marketing solution for enterprises",
+    features: [
+      "Social Media Management (All platforms)",
+      "Monthly Content Creation (40+ posts)",
+      "Comprehensive SEO Strategy",
+      "Google Ads & Display Network",
+      "Social Media Advertising",
+      "Email Marketing Automation",
+      "Content Marketing Strategy",
+      "Influencer Marketing",
+      "Real-time Analytics Dashboard",
+      "Weekly Strategy Meetings",
+      "Dedicated Account Manager"
+    ],
+    icon: "Megaphone"
+  },
+  custom: {
+    id: "custom",
+    name: "Custom Package",
+    price: 0,
+    description: "Tailored digital marketing solution",
+    features: ["Customized services based on your requirements"],
+    icon: "Package"
+  }
+};
+
+// Marketing Service Options
+const MARKETING_SERVICES = [
+  { id: "social_media", label: "Social Media Management" },
+  { id: "seo", label: "SEO Optimization" },
+  { id: "content", label: "Content Creation" },
+  { id: "ppc", label: "Pay-Per-Click Advertising" },
+  { id: "email", label: "Email Marketing" },
+  { id: "analytics", label: "Analytics & Reporting" },
+  { id: "social_ads", label: "Social Media Advertising" },
+  { id: "influencer", label: "Influencer Marketing" },
+  { id: "video", label: "Video Marketing" },
+  { id: "reputation", label: "Online Reputation Management" },
+];
+
 // Development Phases
 const DEVELOPMENT_PHASES = [
   { id: "designing", label: "Design", defaultWeight: 15 },
@@ -30,6 +107,13 @@ const AddProject = () => {
   const [staff, setStaff] = useState([]);
   const [staffLoading, setStaffLoading] = useState(true);
 
+  // Digital Marketing State
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [customServices, setCustomServices] = useState([]);
+  const [marketingBudget, setMarketingBudget] = useState("");
+  const [marketingDuration, setMarketingDuration] = useState("3");
+  const [marketingStartDate, setMarketingStartDate] = useState("");
+
   const [formData, setFormData] = useState({
     clientId: "",
     projectName: "",
@@ -38,6 +122,7 @@ const AddProject = () => {
     deadline: "",
     projectCost: "",
     paymentMilestone: "",
+    status: "active",
     category: "software",
   });
 
@@ -62,6 +147,14 @@ const AddProject = () => {
     return assignment;
   });
 
+  // Marketing team
+  const [marketingTeam, setMarketingTeam] = useState({
+    marketing: {
+      members: [],
+      selectedEmployee: ""
+    }
+  });
+
   const [detailErrors, setDetailErrors] = useState({});
 
   // Fetch clients and staff
@@ -73,7 +166,9 @@ const AddProject = () => {
   const fetchClients = async () => {
     try {
       const response = await fetch(CLIENTS_URL, {
-        headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+        headers: {
+          Authorization: `Bearer ${AUTH_TOKEN}`,
+        },
       });
       const data = await response.json();
       if (response.ok && data.success && data.data) {
@@ -89,7 +184,9 @@ const AddProject = () => {
   const fetchStaff = async () => {
     try {
       const response = await fetch(STAFF_URL, {
-        headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+        headers: {
+          Authorization: `Bearer ${AUTH_TOKEN}`,
+        },
       });
       const data = await response.json();
       if (response.ok && data.success && data.data) {
@@ -155,19 +252,6 @@ const AddProject = () => {
       newErrors[field] = validateField(field, formData[field]);
     });
 
-    // Validate work division totals
-    const total = Object.values(workDivision).reduce((sum, val) => sum + val, 0);
-    if (total !== 100) {
-      newErrors.workDivision = `Work division must total 100% (currently ${total}%)`;
-    }
-
-    // Validate team assignment
-    DEVELOPMENT_PHASES.forEach(phase => {
-      if (teamAssignment[phase.id].length === 0) {
-        newErrors[`${phase.id}_members`] = `At least one team member is required for ${phase.label}`;
-      }
-    });
-
     setErrors(newErrors);
     const hasErrors = Object.values(newErrors).some(error => error);
     return !hasErrors;
@@ -212,6 +296,8 @@ const AddProject = () => {
   const getAvailableStaffForPhase = (phaseId) => {
     const assigned = teamAssignment[phaseId] || [];
     const assignedIds = assigned.map(s => s.employeeId);
+    
+    // Filter staff by role (you can customize this mapping)
     return staff.filter(s => !assignedIds.includes(s.employeeId));
   };
 
@@ -242,6 +328,80 @@ const AddProject = () => {
     }));
   };
 
+  // Package selection
+  const handlePackageSelect = (packageId) => {
+    const pkg = MARKETING_PACKAGES[packageId];
+    setSelectedPackage(pkg);
+    if (packageId !== "custom" && pkg) {
+      setFormData(prev => ({ ...prev, projectCost: pkg.price.toString() }));
+      setMarketingBudget(pkg.price.toString());
+    } else if (packageId === "custom") {
+      setFormData(prev => ({ ...prev, projectCost: "" }));
+      setMarketingBudget("");
+    }
+    if (packageId !== "custom") setCustomServices([]);
+  };
+
+  // Toggle custom service
+  const toggleCustomService = (serviceId) => {
+    setCustomServices(prev => {
+      if (prev.includes(serviceId)) {
+        return prev.filter(id => id !== serviceId);
+      } else {
+        return [...prev, serviceId];
+      }
+    });
+  };
+
+  // Marketing team management
+  const addMarketingTeamMember = () => {
+    const team = marketingTeam.marketing;
+    if (!team.selectedEmployee) return;
+    
+    const employee = staff.find(s => s.employeeId === team.selectedEmployee);
+    if (!employee) return;
+
+    if (!team.members.find(m => m.employeeId === employee.employeeId)) {
+      setMarketingTeam(prev => ({
+        ...prev,
+        marketing: {
+          ...prev.marketing,
+          members: [...prev.marketing.members, {
+            employeeId: employee.employeeId,
+            name: employee.employeeName,
+            role: "marketing"
+          }],
+          selectedEmployee: ""
+        }
+      }));
+    }
+  };
+
+  const removeMarketingTeamMember = (employeeId) => {
+    setMarketingTeam(prev => ({
+      ...prev,
+      marketing: {
+        ...prev.marketing,
+        members: prev.marketing.members.filter(m => m.employeeId !== employeeId)
+      }
+    }));
+  };
+
+  const handleMarketingEmployeeSelect = (employeeId) => {
+    setMarketingTeam(prev => ({
+      ...prev,
+      marketing: {
+        ...prev.marketing,
+        selectedEmployee: employeeId
+      }
+    }));
+  };
+
+  const getAvailableMarketingStaff = () => {
+    const assignedIds = marketingTeam.marketing.members.map(m => m.employeeId);
+    return staff.filter(s => !assignedIds.includes(s.employeeId));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -263,6 +423,25 @@ const AddProject = () => {
       return;
     }
 
+    // Validate team assignment for software projects
+    if (projectType === "software" || projectType === "website" || projectType === "app") {
+      let hasMissingTeam = false;
+      DEVELOPMENT_PHASES.forEach(phase => {
+        if (teamAssignment[phase.id].length === 0) {
+          hasMissingTeam = true;
+        }
+      });
+      if (hasMissingTeam) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Team Required',
+          text: 'Please assign at least one team member to each phase.',
+          confirmButtonColor: '#0d9488',
+        });
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -275,9 +454,25 @@ const AddProject = () => {
         deadline: formData.deadline,
         paymentMilestone: Number(formData.paymentMilestone),
         category: projectType,
-        workDivision: workDivision,
-        teamAssignment: teamAssignment,
       };
+
+      if (projectType === "software" || projectType === "website" || projectType === "app") {
+        payload.workDivision = workDivision;
+        payload.teamAssignment = teamAssignment;
+      }
+
+      if (projectType === "digital_marketing") {
+        payload.marketingDetails = {
+          package: selectedPackage,
+          customServices: selectedPackage?.id === "custom" ? customServices : [],
+          duration: marketingDuration,
+          startDate: marketingStartDate,
+          budget: marketingBudget ? Number(marketingBudget) : 0,
+        };
+        payload.teamAssignment = {
+          marketing: marketingTeam.marketing.members
+        };
+      }
 
       const response = await fetch(API_URL, {
         method: "POST",
@@ -325,11 +520,23 @@ const AddProject = () => {
 
   const typeButtons = [
     { value: "website", label: "Website" },
-    { value: "mobile app", label: "Mobile App" },
+    { value: "app", label: "App" },
     { value: "software", label: "Software" },
-    { value: "digital market", label: "Digital Marketing" },
+    // { value: "digital_marketing", label: "Digital Marketing" },
   ];
 
+  const calculateDuration = () => {
+    if (formData.projectStartDate && formData.deadline) {
+      const start = new Date(formData.projectStartDate);
+      const end = new Date(formData.deadline);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    }
+    return null;
+  };
+
+  const duration = calculateDuration();
   const totalWorkDivision = Object.values(workDivision).reduce((sum, val) => sum + val, 0);
 
   return (
@@ -346,15 +553,18 @@ const AddProject = () => {
               <p className="text-sm text-gray-500">Launch projects with complete team management</p>
             </div>
           </div>
-          <button onClick={() => navigate("/projects")}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-teal-300 text-gray-600 font-semibold text-sm hover:shadow-md transition-all w-full sm:w-auto">
+          <button 
+            onClick={() => navigate("/projects")}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-teal-300 text-gray-600 font-semibold text-sm hover:shadow-md transition-all w-full sm:w-auto"
+          >
             ← Back
           </button>
         </div>
 
-        {/* Form */}
+        {/* Main Form */}
         <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-teal-200/30 shadow-xl p-6 lg:p-8">
           <form onSubmit={handleSubmit} className="space-y-8">
+
             {/* Client Selection */}
             <div>
               <div className="flex items-center gap-3 mb-4">
@@ -388,6 +598,7 @@ const AddProject = () => {
                   )}
                 </div>
 
+                {/* Client Details */}
                 {selectedClient && (
                   <div className="bg-teal-50 border border-teal-200 rounded-xl p-4 mt-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -476,6 +687,30 @@ const AddProject = () => {
                   required
                 />
               </div>
+
+              {/* Duration Display */}
+              {duration !== null && (
+                <div className="mt-4 p-4 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700">
+                        <Clock size={16} className="inline mr-2 text-teal-600" />
+                        Project Timeline
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        From {formData.projectStartDate} to {formData.deadline}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-teal-700">{duration}</span>
+                      <span className="text-xs text-gray-500 ml-1">days</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                    <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-500" style={{ width: '100%' }}></div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Project Type */}
@@ -504,120 +739,316 @@ const AddProject = () => {
               </div>
             </div>
 
-            {/* Development Phases */}
-            <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
-                <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">⚙️ Development Phases</span>
-                <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
-              </div>
-
-              {/* Work Division */}
-              <div className="mb-6">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Work Division (%)</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {DEVELOPMENT_PHASES.map((phase) => (
-                    <div key={phase.id}>
-                      <label className="text-xs font-medium text-gray-600 block mb-1 capitalize">{phase.label}</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={workDivision[phase.id]}
-                        onChange={(e) => handleWorkDivisionChange(phase.id, e.target.value)}
-                        className="w-full h-10 px-3 rounded-lg text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
-                      />
-                    </div>
-                  ))}
+            {/* Software/Website/App Development */}
+            {(projectType === "software" || projectType === "website" || projectType === "app") && (
+              <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
+                  <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">⚙️ Development Phases</span>
+                  <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
                 </div>
-                <div className={`mt-2 text-sm font-medium ${totalWorkDivision === 100 ? 'text-green-600' : 'text-red-500'}`}>
-                  Total: {totalWorkDivision}% {totalWorkDivision !== 100 && '(must equal 100%)'}
-                </div>
-                {errors.workDivision && (
-                  <p className="text-xs text-red-500 mt-1">{errors.workDivision}</p>
-                )}
-              </div>
 
-              {/* Team Assignment */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Team Assignment</h4>
-                {DEVELOPMENT_PHASES.map((phase) => {
-                  const availableStaff = getAvailableStaffForPhase(phase.id);
-                  return (
-                    <div key={phase.id} className="mb-4 last:mb-0 p-4 bg-white rounded-xl border border-gray-200">
-                      <div className="flex items-center justify-between mb-3">
-                        <h5 className="text-sm font-bold text-gray-700 capitalize">{phase.label} Team</h5>
-                        <span className="text-xs text-gray-500">{teamAssignment[phase.id].length} members</span>
+                {/* Work Division */}
+                <div className="mb-6">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Work Division (%)</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {DEVELOPMENT_PHASES.map((phase) => (
+                      <div key={phase.id}>
+                        <label className="text-xs font-medium text-gray-600 block mb-1 capitalize">{phase.label}</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={workDivision[phase.id]}
+                          onChange={(e) => handleWorkDivisionChange(phase.id, e.target.value)}
+                          className="w-full h-10 px-3 rounded-lg text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                        />
                       </div>
-                      
-                      <div className="flex gap-2 mb-3">
-                        <select
-                          value=""
-                          onChange={(e) => addTeamMember(phase.id, e.target.value)}
-                          className="flex-1 h-9 px-3 rounded-lg text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
-                          disabled={staffLoading || availableStaff.length === 0}
-                        >
-                          <option value="">{staffLoading ? "Loading staff..." : availableStaff.length === 0 ? "No staff available" : "Select staff..."}</option>
-                          {availableStaff.map((s) => (
-                            <option key={s.employeeId} value={s.employeeId}>
-                              {s.employeeName} ({s.role})
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const select = document.querySelector(`[data-phase="${phase.id}"]`);
-                            if (select && select.value) {
-                              addTeamMember(phase.id, select.value);
-                              select.value = "";
-                            }
-                          }}
-                          className="flex items-center gap-1 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-colors"
-                        >
-                          <UserPlus size={14} /> Add
-                        </button>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2">
-                        {teamAssignment[phase.id].length === 0 ? (
-                          <span className="text-xs text-gray-400 italic">No members assigned</span>
-                        ) : (
-                          teamAssignment[phase.id].map((member) => (
-                            <span
-                              key={member.employeeId}
-                              className="flex items-center gap-1.5 bg-teal-100 text-teal-700 px-3 py-1.5 rounded-full text-xs font-semibold"
-                            >
-                              {member.name}
-                              <button
-                                type="button"
-                                onClick={() => removeTeamMember(phase.id, member.employeeId)}
-                                className="hover:text-red-500 transition-colors ml-1"
+                    ))}
+                  </div>
+                  <div className={`mt-2 text-sm font-medium ${totalWorkDivision === 100 ? 'text-green-600' : 'text-red-500'}`}>
+                    Total: {totalWorkDivision}% {totalWorkDivision !== 100 && '(must equal 100%)'}
+                  </div>
+                </div>
+
+                {/* Team Assignment */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Team Assignment</h4>
+                  {DEVELOPMENT_PHASES.map((phase) => {
+                    const availableStaff = getAvailableStaffForPhase(phase.id);
+                    return (
+                      <div key={phase.id} className="mb-4 last:mb-0 p-4 bg-white rounded-xl border border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="text-sm font-bold text-gray-700 capitalize">{phase.label} Team</h5>
+                          <span className="text-xs text-gray-500">{teamAssignment[phase.id].length} members</span>
+                        </div>
+                        
+                        <div className="flex gap-2 mb-3">
+                          <select
+                            value=""
+                            onChange={(e) => addTeamMember(phase.id, e.target.value)}
+                            className="flex-1 h-9 px-3 rounded-lg text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                            disabled={staffLoading || availableStaff.length === 0}
+                          >
+                            <option value="">{staffLoading ? "Loading staff..." : availableStaff.length === 0 ? "No staff available" : "Select staff..."}</option>
+                            {availableStaff.map((s) => (
+                              <option key={s.employeeId} value={s.employeeId}>
+                                {s.employeeName} ({s.role})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const select = document.querySelector(`[data-phase="${phase.id}"]`);
+                              if (select && select.value) {
+                                addTeamMember(phase.id, select.value);
+                                select.value = "";
+                              }
+                            }}
+                            className="flex items-center gap-1 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                          >
+                            <UserPlus size={14} /> Add
+                          </button>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-2">
+                          {teamAssignment[phase.id].length === 0 ? (
+                            <span className="text-xs text-gray-400 italic">No members assigned</span>
+                          ) : (
+                            teamAssignment[phase.id].map((member) => (
+                              <span
+                                key={member.employeeId}
+                                className="flex items-center gap-1.5 bg-teal-100 text-teal-700 px-3 py-1.5 rounded-full text-xs font-semibold"
                               >
-                                <X size={12} />
-                              </button>
-                            </span>
-                          ))
-                        )}
+                                {member.name}
+                                <button
+                                  type="button"
+                                  onClick={() => removeTeamMember(phase.id, member.employeeId)}
+                                  className="hover:text-red-500 transition-colors ml-1"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </span>
+                            ))
+                          )}
+                        </div>
                       </div>
-                      {errors[`${phase.id}_members`] && (
-                        <p className="text-xs text-red-500 mt-2">{errors[`${phase.id}_members`]}</p>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Digital Marketing */}
+            {projectType === "digital_marketing" && (
+              <div className="space-y-6">
+                {/* Marketing Packages */}
+                <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
+                    <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">📦 Marketing Package</span>
+                    <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {Object.values(MARKETING_PACKAGES).map((pkg) => (
+                      <div
+                        key={pkg.id}
+                        onClick={() => handlePackageSelect(pkg.id)}
+                        className={`cursor-pointer rounded-xl p-4 border-2 transition-all ${
+                          selectedPackage?.id === pkg.id
+                            ? 'border-teal-500 bg-teal-50 shadow-lg shadow-teal-500/10'
+                            : 'border-gray-200 hover:border-teal-300 hover:shadow-md'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="font-bold text-gray-800 text-sm">{pkg.name}</h4>
+                            {pkg.id !== "custom" && (
+                              <span className="inline-block mt-1 px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-bold rounded-full">
+                                ₹{pkg.price.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                          {selectedPackage?.id === pkg.id && (
+                            <CheckCircle size={20} className="text-teal-600" />
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">{pkg.description}</p>
+                        <ul className="mt-3 space-y-1">
+                          {pkg.features.slice(0, 3).map((feature, idx) => (
+                            <li key={idx} className="text-xs text-gray-600 flex items-start gap-1.5">
+                              <CheckCircle size={12} className="text-teal-500 mt-0.5 shrink-0" />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                          {pkg.features.length > 3 && (
+                            <li className="text-xs text-teal-600 font-semibold">+{pkg.features.length - 3} more</li>
+                          )}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Services */}
+                {selectedPackage?.id === "custom" && (
+                  <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
+                      <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">🎯 Custom Services</span>
+                      <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {MARKETING_SERVICES.map((service) => (
+                        <label
+                          key={service.id}
+                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
+                            customServices.includes(service.id)
+                              ? 'border-teal-500 bg-teal-50'
+                              : 'border-gray-200 hover:border-teal-200'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={customServices.includes(service.id)}
+                            onChange={() => toggleCustomService(service.id)}
+                            className="w-4 h-4 accent-teal-600"
+                          />
+                          <span className="text-sm text-gray-700">{service.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Campaign Details */}
+                <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
+                    <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">📊 Campaign Details</span>
+                    <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <InputField
+                      label="Campaign Start Date"
+                      type="date"
+                      value={marketingStartDate}
+                      onChange={(e) => {
+                        setMarketingStartDate(e.target.value);
+                        if (e.target.value && !formData.projectStartDate) {
+                          setFormData(prev => ({ ...prev, projectStartDate: e.target.value }));
+                        }
+                      }}
+                    />
+                    <div>
+                      <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Campaign Duration</label>
+                      <select
+                        value={marketingDuration}
+                        onChange={(e) => setMarketingDuration(e.target.value)}
+                        className="w-full h-11 px-4 rounded-xl text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                      >
+                        <option value="1">1 Month</option>
+                        <option value="3">3 Months</option>
+                        <option value="6">6 Months</option>
+                        <option value="12">12 Months</option>
+                      </select>
+                    </div>
+                    {selectedPackage?.id === "custom" && (
+                      <InputField
+                        label="Custom Budget (₹)"
+                        type="number"
+                        placeholder="Enter budget"
+                        value={marketingBudget}
+                        onChange={(e) => {
+                          setMarketingBudget(e.target.value);
+                          setFormData(prev => ({ ...prev, projectCost: e.target.value }));
+                        }}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* Marketing Team */}
+                <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
+                    <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">👥 Marketing Team</span>
+                    <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
+                  </div>
+                  
+                  <div className="p-4 bg-white rounded-xl border border-gray-200">
+                    <div className="flex gap-2 mb-3">
+                      <select
+                        value={marketingTeam.marketing.selectedEmployee}
+                        onChange={(e) => handleMarketingEmployeeSelect(e.target.value)}
+                        className="flex-1 h-9 px-3 rounded-lg text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                        disabled={staffLoading || getAvailableMarketingStaff().length === 0}
+                      >
+                        <option value="">{staffLoading ? "Loading staff..." : getAvailableMarketingStaff().length === 0 ? "No staff available" : "Select staff..."}</option>
+                        {getAvailableMarketingStaff().map((s) => (
+                          <option key={s.employeeId} value={s.employeeId}>
+                            {s.employeeName} ({s.role})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={addMarketingTeamMember}
+                        className="flex items-center gap-1 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                      >
+                        <UserPlus size={14} /> Add
+                      </button>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      {marketingTeam.marketing.members.length === 0 ? (
+                        <span className="text-xs text-gray-400 italic">No members assigned</span>
+                      ) : (
+                        marketingTeam.marketing.members.map((member) => (
+                          <span
+                            key={member.employeeId}
+                            className="flex items-center gap-1.5 bg-teal-100 text-teal-700 px-3 py-1.5 rounded-full text-xs font-semibold"
+                          >
+                            {member.name}
+                            <button
+                              type="button"
+                              onClick={() => removeMarketingTeamMember(member.employeeId)}
+                              className="hover:text-red-500 transition-colors ml-1"
+                            >
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ))
                       )}
                     </div>
-                  );
-                })}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Buttons */}
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100">
-              <button type="button" onClick={() => navigate("/projects")}
-                className="flex-1 sm:flex-none sm:w-32 py-3 rounded-xl border-2 border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition-all">
+              <button 
+                type="button" 
+                onClick={() => navigate("/projects")}
+                className="flex-1 sm:flex-none sm:w-32 py-3 rounded-xl border-2 border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition-all"
+              >
                 Cancel
               </button>
-              <button type="submit" disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-bold text-sm shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed">
-                {loading ? <><Loader size={17} className="animate-spin" />Creating…</> : <><FolderPlus size={17} />Create Project</>}
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-bold text-sm shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <><Loader size={17} className="animate-spin" />Creating…</>
+                ) : (
+                  <><FolderPlus size={17} />Create Project</>
+                )}
               </button>
             </div>
           </form>
