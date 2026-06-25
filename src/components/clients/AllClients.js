@@ -284,7 +284,7 @@ const AllClients = () => {
                           {client.name?.charAt(0).toUpperCase() || '?'}
                         </div>
                         <div className="flex gap-1">
-                          <button onClick={() => navigate(`/clients/${client._id}`)}
+                          <button onClick={() => navigate(`/client/${client._id}`)}
                             className="p-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-600 transition-all" title="View">
                             <MdVisibility size={16} />
                           </button>

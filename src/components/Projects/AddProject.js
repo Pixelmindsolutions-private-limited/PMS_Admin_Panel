@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { FolderPlus, X, CheckCircle, AlertCircle, Loader, UserPlus, UserMinus, Package, TrendingUp, Share2, Search, Image, Megaphone, Clock } from "lucide-react";
 
-const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects";
+const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects/create";
 const CLIENTS_URL = "https://pmsbackend.pixelmindsolutions.com/api/clients/all";
 const STAFF_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff/options";
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
@@ -86,13 +86,13 @@ const MARKETING_SERVICES = [
   { id: "reputation", label: "Online Reputation Management" },
 ];
 
-// Development Phases
+// Development Phases with default days (will be overridden by calculated values)
 const DEVELOPMENT_PHASES = [
-  { id: "designing", label: "Design", defaultWeight: 15 },
-  { id: "frontend", label: "Frontend", defaultWeight: 25 },
-  { id: "backend", label: "Backend", defaultWeight: 30 },
-  { id: "testing", label: "Testing", defaultWeight: 20 },
-  { id: "deployment", label: "Deployment", defaultWeight: 10 }
+  { id: "designing", label: "Design", defaultDays: 15 },
+  { id: "frontend", label: "Frontend", defaultDays: 25 },
+  { id: "backend", label: "Backend", defaultDays: 30 },
+  { id: "testing", label: "Testing", defaultDays: 20 },
+  { id: "deployment", label: "Deployment", defaultDays: 10 }
 ];
 
 const AddProject = () => {
@@ -129,11 +129,11 @@ const AddProject = () => {
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
 
-  // Work Division
+  // Work Division in Days
   const [workDivision, setWorkDivision] = useState(() => {
     const division = {};
     DEVELOPMENT_PHASES.forEach(phase => {
-      division[phase.id] = phase.defaultWeight;
+      division[phase.id] = phase.defaultDays;
     });
     return division;
   });
@@ -162,6 +162,31 @@ const AddProject = () => {
     fetchClients();
     fetchStaff();
   }, []);
+
+  // Calculate total days when dates change
+  useEffect(() => {
+    if (formData.projectStartDate && formData.deadline) {
+      const totalDays = calculateTotalDays();
+      if (totalDays > 0) {
+        // Distribute days proportionally based on default weights
+        const totalDefaultDays = DEVELOPMENT_PHASES.reduce((sum, phase) => sum + phase.defaultDays, 0);
+        const newDivision = {};
+        DEVELOPMENT_PHASES.forEach(phase => {
+          const proportion = phase.defaultDays / totalDefaultDays;
+          newDivision[phase.id] = Math.round(totalDays * proportion);
+        });
+        
+        // Adjust to ensure sum equals totalDays
+        const sum = Object.values(newDivision).reduce((a, b) => a + b, 0);
+        if (sum !== totalDays) {
+          const diff = totalDays - sum;
+          newDivision[DEVELOPMENT_PHASES[0].id] += diff;
+        }
+        
+        setWorkDivision(newDivision);
+      }
+    }
+  }, [formData.projectStartDate, formData.deadline]);
 
   const fetchClients = async () => {
     try {
@@ -283,12 +308,35 @@ const AddProject = () => {
     }
   };
 
-  // Handle work division change
+  // Calculate total days between start date and deadline
+  const calculateTotalDays = () => {
+    if (formData.projectStartDate && formData.deadline) {
+      const start = new Date(formData.projectStartDate);
+      const end = new Date(formData.deadline);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays;
+    }
+    return 0;
+  };
+
+  // Handle work division change (in days)
   const handleWorkDivisionChange = (phaseId, value) => {
     const numValue = parseInt(value) || 0;
+    const totalDays = calculateTotalDays();
+    
+    // Calculate current sum of other phases
+    const currentSum = Object.entries(workDivision)
+      .filter(([id]) => id !== phaseId)
+      .reduce((sum, [_, val]) => sum + val, 0);
+    
+    // Allow values up to remaining days
+    const maxAllowed = totalDays - currentSum;
+    const finalValue = Math.min(maxAllowed, Math.max(0, numValue));
+    
     setWorkDivision(prev => ({
       ...prev,
-      [phaseId]: Math.min(100, Math.max(0, numValue))
+      [phaseId]: finalValue
     }));
   };
 
@@ -445,6 +493,7 @@ const AddProject = () => {
     setLoading(true);
 
     try {
+      // Build the payload matching the Postman request structure
       const payload = {
         clientId: formData.clientId,
         projectName: formData.projectName.trim(),
@@ -456,11 +505,39 @@ const AddProject = () => {
         category: projectType,
       };
 
+      // Add workDivision and teamAssignment for software/website/app projects
       if (projectType === "software" || projectType === "website" || projectType === "app") {
+        // Ensure workDivision values sum to total days
+        const totalDays = calculateTotalDays();
+        const totalWorkDays = Object.values(workDivision).reduce((sum, val) => sum + val, 0);
+        
+        if (totalDays === 0) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Invalid Timeline',
+            text: 'Please set a valid start date and deadline.',
+            confirmButtonColor: '#0d9488',
+          });
+          setLoading(false);
+          return;
+        }
+        
+        if (totalWorkDays !== totalDays) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Work Division Error',
+            text: `Total days (${totalWorkDays}) must equal the project duration (${totalDays} days).`,
+            confirmButtonColor: '#0d9488',
+          });
+          setLoading(false);
+          return;
+        }
+        
         payload.workDivision = workDivision;
         payload.teamAssignment = teamAssignment;
       }
 
+      // Add marketing details for digital marketing projects
       if (projectType === "digital_marketing") {
         payload.marketingDetails = {
           package: selectedPackage,
@@ -474,11 +551,14 @@ const AddProject = () => {
         };
       }
 
+      // Log the payload for debugging
+      console.log("Sending payload:", JSON.stringify(payload, null, 2));
+
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${AUTH_TOKEN}`,
         },
         body: JSON.stringify(payload),
       });
@@ -489,7 +569,7 @@ const AddProject = () => {
         Swal.fire({
           icon: 'success',
           title: 'Project Created!',
-          text: `Project "${data.data.projectName}" has been created successfully.`,
+          text: `Project "${data.data?.projectName || formData.projectName}" has been created successfully.`,
           confirmButtonColor: '#0d9488',
           timer: 2000,
           timerProgressBar: true,
@@ -525,19 +605,8 @@ const AddProject = () => {
     // { value: "digital_marketing", label: "Digital Marketing" },
   ];
 
-  const calculateDuration = () => {
-    if (formData.projectStartDate && formData.deadline) {
-      const start = new Date(formData.projectStartDate);
-      const end = new Date(formData.deadline);
-      const diffTime = Math.abs(end - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
-    }
-    return null;
-  };
-
-  const duration = calculateDuration();
-  const totalWorkDivision = Object.values(workDivision).reduce((sum, val) => sum + val, 0);
+  const duration = calculateTotalDays();
+  const totalWorkDays = Object.values(workDivision).reduce((sum, val) => sum + val, 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50/90 via-white to-teal-100/70">
@@ -689,7 +758,7 @@ const AddProject = () => {
               </div>
 
               {/* Duration Display */}
-              {duration !== null && (
+              {duration > 0 && (
                 <div className="mt-4 p-4 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-200">
                   <div className="flex items-center justify-between">
                     <div>
@@ -748,9 +817,9 @@ const AddProject = () => {
                   <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
                 </div>
 
-                {/* Work Division */}
+                {/* Work Division in Days */}
                 <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Work Division (%)</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Work Division (Days)</h4>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {DEVELOPMENT_PHASES.map((phase) => (
                       <div key={phase.id}>
@@ -758,7 +827,6 @@ const AddProject = () => {
                         <input
                           type="number"
                           min="0"
-                          max="100"
                           value={workDivision[phase.id]}
                           onChange={(e) => handleWorkDivisionChange(phase.id, e.target.value)}
                           className="w-full h-10 px-3 rounded-lg text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
@@ -766,9 +834,19 @@ const AddProject = () => {
                       </div>
                     ))}
                   </div>
-                  <div className={`mt-2 text-sm font-medium ${totalWorkDivision === 100 ? 'text-green-600' : 'text-red-500'}`}>
-                    Total: {totalWorkDivision}% {totalWorkDivision !== 100 && '(must equal 100%)'}
+                  <div className="mt-2 flex justify-between items-center">
+                    <span className={`text-sm font-medium ${totalWorkDays === duration ? 'text-green-600' : 'text-red-500'}`}>
+                      Total: {totalWorkDays} days
+                    </span>
+                    <span className={`text-sm font-medium ${totalWorkDays === duration ? 'text-green-600' : 'text-red-500'}`}>
+                      {totalWorkDays === duration ? '✓ Balanced' : `Needs ${duration - totalWorkDays} more days`}
+                    </span>
                   </div>
+                  {duration === 0 && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      ⚠️ Please set start date and deadline to calculate days
+                    </p>
+                  )}
                 </div>
 
                 {/* Team Assignment */}

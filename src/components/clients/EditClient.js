@@ -380,7 +380,7 @@ const EditClient = () => {
 
             {/* Buttons */}
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100">
-              <button type="button" onClick={() => navigate("/clients")}
+              <button type="button" onClick={() => navigate("/allclients")}
                 className="flex-1 sm:flex-none sm:w-32 py-3 rounded-xl border-2 border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition-all">
                 Cancel
               </button>

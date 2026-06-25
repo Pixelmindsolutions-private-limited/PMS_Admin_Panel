@@ -1015,6 +1015,16 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
       ],
     },
     {
+      id: 'installments',
+      label: 'Installments',
+      icon: <MdFolder />,
+      description: 'Leads',
+      submenu: [
+        { path: '/add-installment', label: 'Installments', icon: <MdAddCircleOutline />, description: 'Create Lead' },
+        { path: '/allRemainders', label: 'Remainder', icon: <MdListAlt />, description: 'All Remainders' },
+      ],
+    },
+    {
       id: 'assigned-works',
       label: 'Work Allocation',
       icon: <MdAssignment />,

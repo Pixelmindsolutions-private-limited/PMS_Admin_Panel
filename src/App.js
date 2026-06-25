@@ -31,6 +31,7 @@ import AddClient from './components/clients/AddClient';
 import EditClient from './components/clients/EditClient';
 import AllClients from './components/clients/AllClients';
 import SingleClient from './components/clients/SingleClient';
+import AddInstallment from './components/Installments/AddInstallments';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
@@ -62,10 +63,11 @@ function App() {
         <Route path="staff/:id" element={<StaffDetails />} />
         <Route path="staff/edit/:id" element={<EditStaff />} />
         <Route path="add-staff" element={<AddStaff />} />
-        <Route path='add-client' element={<AddClient/>}/>
-        <Route path='edit-client' element={<EditClient/>}/>
-        <Route path='allclients' element={<AllClients/>}/>
-        <Route path='client/:id' element={<SingleClient/>}/>
+        <Route path='add-client' element={<AddClient />} />
+        <Route path='edit-client/:id' element={<EditClient />} />
+        <Route path='allclients' element={<AllClients />} />
+        <Route path='client/:id' element={<SingleClient />} />
+        <Route path='add-installment' element={<AddInstallment />} />
         <Route path="add-project" element={<AddProject />} />
         <Route path="projects/:id" element={<ProjectDetails />} />
         <Route path="edit-project/:id" element={<EditProject />} />
