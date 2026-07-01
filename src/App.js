@@ -59,32 +59,42 @@ function App() {
         element={<DashboardLayout isLoggedIn={isLoggedIn} onLogout={handleLogout} />}
       >
         <Route path="dashboard" element={<Dashboard />} />
+
         <Route path="staff" element={<Staff />} />
         <Route path="staff/:id" element={<StaffDetails />} />
         <Route path="staff/edit/:id" element={<EditStaff />} />
         <Route path="add-staff" element={<AddStaff />} />
+
         <Route path='add-client' element={<AddClient />} />
         <Route path='edit-client/:id' element={<EditClient />} />
         <Route path='allclients' element={<AllClients />} />
         <Route path='client/:id' element={<SingleClient />} />
+
         <Route path='add-installment' element={<AddInstallment />} />
+
         <Route path="add-project" element={<AddProject />} />
         <Route path="projects/:id" element={<ProjectDetails />} />
         <Route path="edit-project/:id" element={<EditProject />} />
         <Route path="projects" element={<Projects />} />
+
         <Route path="assigned-works" element={<AssignedWorks />} />
         <Route path="add-worksheet" element={<AddWorksheet />} />
         <Route path="edit-worksheet/:id" element={<EditWorksheet />} />
+
         <Route path="add-attendance" element={<AddAttendance />} />
         <Route path="attendance" element={<ShowAttendance />} />
+
         <Route path="work-session-live" element={<WorkSessionLive />} />
         <Route path="work-session-history" element={<WorkSessionHistory />} />
         <Route path="work-session-reports" element={<WorkSessionReports />} />
+
         <Route path="create-invoice" element={<CreateInvoice />} />
         <Route path="invoices" element={<ShowInvoices />} />
         <Route path="invoices1" element={<AdvancedInvoice />} />
+
         <Route path="create-payslip" element={<CreatePayslip />} />
         <Route path="payslips" element={<ShowPayslips />} />
+        
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>

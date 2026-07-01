@@ -6,73 +6,11 @@ import { FolderPlus, X, CheckCircle, AlertCircle, Loader, UserPlus, UserMinus, P
 const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects/create";
 const CLIENTS_URL = "https://pmsbackend.pixelmindsolutions.com/api/clients/all";
 const STAFF_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff/options";
+const MARKETING_PLANS_URL = "https://pmsbackend.pixelmindsolutions.com/api/digitalmarketing/plans";
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;
 
-// Digital Marketing Packages
-const MARKETING_PACKAGES = {
-  basic: {
-    id: "basic",
-    name: "Basic Digital Marketing",
-    price: 15000,
-    description: "Essential digital marketing services for small businesses",
-    features: [
-      "Social Media Management (3 platforms)",
-      "Monthly Content Creation (10 posts)",
-      "Basic SEO Optimization",
-      "Google My Business Setup",
-      "Monthly Performance Report"
-    ],
-    icon: "Share2"
-  },
-  standard: {
-    id: "standard",
-    name: "Standard Digital Marketing",
-    price: 35000,
-    description: "Comprehensive digital marketing strategy for growing businesses",
-    features: [
-      "Social Media Management (5 platforms)",
-      "Monthly Content Creation (20 posts)",
-      "Advanced SEO Optimization",
-      "Google Ads Management",
-      "Facebook/Instagram Ads",
-      "Email Marketing Campaigns",
-      "Weekly Performance Reports",
-      "Competitor Analysis"
-    ],
-    icon: "TrendingUp"
-  },
-  premium: {
-    id: "premium",
-    name: "Premium Digital Marketing",
-    price: 65000,
-    description: "Full-scale digital marketing solution for enterprises",
-    features: [
-      "Social Media Management (All platforms)",
-      "Monthly Content Creation (40+ posts)",
-      "Comprehensive SEO Strategy",
-      "Google Ads & Display Network",
-      "Social Media Advertising",
-      "Email Marketing Automation",
-      "Content Marketing Strategy",
-      "Influencer Marketing",
-      "Real-time Analytics Dashboard",
-      "Weekly Strategy Meetings",
-      "Dedicated Account Manager"
-    ],
-    icon: "Megaphone"
-  },
-  custom: {
-    id: "custom",
-    name: "Custom Package",
-    price: 0,
-    description: "Tailored digital marketing solution",
-    features: ["Customized services based on your requirements"],
-    icon: "Package"
-  }
-};
-
-// Marketing Service Options
+// Marketing Service Options (kept for reference/display only - not sent as-is to backend)
 const MARKETING_SERVICES = [
   { id: "social_media", label: "Social Media Management" },
   { id: "seo", label: "SEO Optimization" },
@@ -108,11 +46,11 @@ const AddProject = () => {
   const [staffLoading, setStaffLoading] = useState(true);
 
   // Digital Marketing State
-  const [selectedPackage, setSelectedPackage] = useState(null);
-  const [customServices, setCustomServices] = useState([]);
-  const [marketingBudget, setMarketingBudget] = useState("");
-  const [marketingDuration, setMarketingDuration] = useState("3");
-  const [marketingStartDate, setMarketingStartDate] = useState("");
+  const [marketingPlans, setMarketingPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [selectedPlanId, setSelectedPlanId] = useState("");
+  const [selectedDurationId, setSelectedDurationId] = useState("");
+  const [marketingWorkDays, setMarketingWorkDays] = useState("");
 
   const [formData, setFormData] = useState({
     clientId: "",
@@ -157,10 +95,11 @@ const AddProject = () => {
 
   const [detailErrors, setDetailErrors] = useState({});
 
-  // Fetch clients and staff
+  // Fetch clients, staff, and marketing plans
   useEffect(() => {
     fetchClients();
     fetchStaff();
+    fetchMarketingPlans();
   }, []);
 
   // Calculate total days when dates change
@@ -175,15 +114,18 @@ const AddProject = () => {
           const proportion = phase.defaultDays / totalDefaultDays;
           newDivision[phase.id] = Math.round(totalDays * proportion);
         });
-        
+
         // Adjust to ensure sum equals totalDays
         const sum = Object.values(newDivision).reduce((a, b) => a + b, 0);
         if (sum !== totalDays) {
           const diff = totalDays - sum;
           newDivision[DEVELOPMENT_PHASES[0].id] += diff;
         }
-        
+
         setWorkDivision(newDivision);
+
+        // Default the marketing work days to the same total (editable by the user)
+        setMarketingWorkDays(prev => (prev === "" ? totalDays.toString() : prev));
       }
     }
   }, [formData.projectStartDate, formData.deadline]);
@@ -221,6 +163,24 @@ const AddProject = () => {
       console.error("Error fetching staff:", error);
     } finally {
       setStaffLoading(false);
+    }
+  };
+
+  const fetchMarketingPlans = async () => {
+    try {
+      const response = await fetch(MARKETING_PLANS_URL, {
+        headers: {
+          Authorization: `Bearer ${AUTH_TOKEN}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok && data.success && data.data) {
+        setMarketingPlans(data.data.filter(plan => plan.isActive !== false));
+      }
+    } catch (error) {
+      console.error("Error fetching marketing plans:", error);
+    } finally {
+      setPlansLoading(false);
     }
   };
 
@@ -324,16 +284,16 @@ const AddProject = () => {
   const handleWorkDivisionChange = (phaseId, value) => {
     const numValue = parseInt(value) || 0;
     const totalDays = calculateTotalDays();
-    
+
     // Calculate current sum of other phases
     const currentSum = Object.entries(workDivision)
       .filter(([id]) => id !== phaseId)
       .reduce((sum, [_, val]) => sum + val, 0);
-    
+
     // Allow values up to remaining days
     const maxAllowed = totalDays - currentSum;
     const finalValue = Math.min(maxAllowed, Math.max(0, numValue));
-    
+
     setWorkDivision(prev => ({
       ...prev,
       [phaseId]: finalValue
@@ -344,7 +304,7 @@ const AddProject = () => {
   const getAvailableStaffForPhase = (phaseId) => {
     const assigned = teamAssignment[phaseId] || [];
     const assignedIds = assigned.map(s => s.employeeId);
-    
+
     // Filter staff by role (you can customize this mapping)
     return staff.filter(s => !assignedIds.includes(s.employeeId));
   };
@@ -376,36 +336,35 @@ const AddProject = () => {
     }));
   };
 
-  // Package selection
-  const handlePackageSelect = (packageId) => {
-    const pkg = MARKETING_PACKAGES[packageId];
-    setSelectedPackage(pkg);
-    if (packageId !== "custom" && pkg) {
-      setFormData(prev => ({ ...prev, projectCost: pkg.price.toString() }));
-      setMarketingBudget(pkg.price.toString());
-    } else if (packageId === "custom") {
-      setFormData(prev => ({ ...prev, projectCost: "" }));
-      setMarketingBudget("");
-    }
-    if (packageId !== "custom") setCustomServices([]);
+  // Derived: currently selected plan and duration objects
+  const selectedPlanObj = marketingPlans.find(p => p._id === selectedPlanId) || null;
+  const selectedDurationObj = selectedPlanObj?.durations.find(d => d._id === selectedDurationId) || null;
+
+  // Select a marketing plan (resets duration since durations differ per plan)
+  const handlePlanSelect = (planId) => {
+    setSelectedPlanId(planId);
+    setSelectedDurationId("");
+    setFormData(prev => ({ ...prev, projectCost: "" }));
   };
 
-  // Toggle custom service
-  const toggleCustomService = (serviceId) => {
-    setCustomServices(prev => {
-      if (prev.includes(serviceId)) {
-        return prev.filter(id => id !== serviceId);
-      } else {
-        return [...prev, serviceId];
-      }
-    });
+  // Select a duration within the chosen plan (sets project cost from plan price)
+  const handleDurationSelect = (durationId) => {
+    setSelectedDurationId(durationId);
+    const plan = marketingPlans.find(p => p._id === selectedPlanId);
+    const duration = plan?.durations.find(d => d._id === durationId);
+    if (duration) {
+      setFormData(prev => ({ ...prev, projectCost: duration.price.toString() }));
+    }
+    if (touched.projectCost) {
+      setErrors(prev => ({ ...prev, projectCost: "" }));
+    }
   };
 
   // Marketing team management
   const addMarketingTeamMember = () => {
     const team = marketingTeam.marketing;
     if (!team.selectedEmployee) return;
-    
+
     const employee = staff.find(s => s.employeeId === team.selectedEmployee);
     if (!employee) return;
 
@@ -490,10 +449,41 @@ const AddProject = () => {
       }
     }
 
+    // Validate plan/duration/team for digital marketing projects
+    if (projectType === "digital_marketing") {
+      if (!selectedPlanId || !selectedDurationId) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Plan Required',
+          text: 'Please select a marketing plan and duration.',
+          confirmButtonColor: '#0d9488',
+        });
+        return;
+      }
+      if (!marketingWorkDays || Number(marketingWorkDays) <= 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Work Days Required',
+          text: 'Please enter the marketing work days.',
+          confirmButtonColor: '#0d9488',
+        });
+        return;
+      }
+      if (marketingTeam.marketing.members.length === 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Team Required',
+          text: 'Please assign at least one marketing team member.',
+          confirmButtonColor: '#0d9488',
+        });
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      // Build the payload matching the Postman request structure
+      // Build the payload matching the backend API structure
       const payload = {
         clientId: formData.clientId,
         projectName: formData.projectName.trim(),
@@ -502,7 +492,7 @@ const AddProject = () => {
         projectEndDate: formData.projectEndDate,
         deadline: formData.deadline,
         paymentMilestone: Number(formData.paymentMilestone),
-        category: projectType,
+        category: projectType === "digital_marketing" ? "digital marketing" : projectType,
       };
 
       // Add workDivision and teamAssignment for software/website/app projects
@@ -510,7 +500,7 @@ const AddProject = () => {
         // Ensure workDivision values sum to total days
         const totalDays = calculateTotalDays();
         const totalWorkDays = Object.values(workDivision).reduce((sum, val) => sum + val, 0);
-        
+
         if (totalDays === 0) {
           Swal.fire({
             icon: 'error',
@@ -521,7 +511,7 @@ const AddProject = () => {
           setLoading(false);
           return;
         }
-        
+
         if (totalWorkDays !== totalDays) {
           Swal.fire({
             icon: 'error',
@@ -532,22 +522,22 @@ const AddProject = () => {
           setLoading(false);
           return;
         }
-        
+
         payload.workDivision = workDivision;
         payload.teamAssignment = teamAssignment;
       }
 
-      // Add marketing details for digital marketing projects
+      // Add digital marketing details matching /api/digitalmarketing/plans contract
       if (projectType === "digital_marketing") {
-        payload.marketingDetails = {
-          package: selectedPackage,
-          customServices: selectedPackage?.id === "custom" ? customServices : [],
-          duration: marketingDuration,
-          startDate: marketingStartDate,
-          budget: marketingBudget ? Number(marketingBudget) : 0,
+        payload.digitalMarketing = {
+          planId: selectedPlanObj._id,
+          duration: selectedDurationObj.duration,
+        };
+        payload.workDivision = {
+          marketing: Number(marketingWorkDays),
         };
         payload.teamAssignment = {
-          marketing: marketingTeam.marketing.members
+          marketing: marketingTeam.marketing.members,
         };
       }
 
@@ -602,7 +592,7 @@ const AddProject = () => {
     { value: "website", label: "Website" },
     { value: "app", label: "App" },
     { value: "software", label: "Software" },
-    // { value: "digital_marketing", label: "Digital Marketing" },
+    { value: "digital_marketing", label: "Digital Marketing" },
   ];
 
   const duration = calculateTotalDays();
@@ -622,7 +612,7 @@ const AddProject = () => {
               <p className="text-sm text-gray-500">Launch projects with complete team management</p>
             </div>
           </div>
-          <button 
+          <button
             onClick={() => navigate("/projects")}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-teal-300 text-gray-600 font-semibold text-sm hover:shadow-md transition-all w-full sm:w-auto"
           >
@@ -641,7 +631,7 @@ const AddProject = () => {
                 <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">👤 Client Selection</span>
                 <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
               </div>
-              
+
               <div className="space-y-3">
                 <div>
                   <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Select Client</label>
@@ -691,7 +681,7 @@ const AddProject = () => {
                 <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">📋 Project Details</span>
                 <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
               </div>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InputField
                   name="projectName"
@@ -743,6 +733,7 @@ const AddProject = () => {
                   onBlur={() => handleBlur("projectCost")}
                   error={touched.projectCost && errors.projectCost}
                   required
+                  readOnly={projectType === "digital_marketing" && !!selectedDurationObj}
                 />
                 <InputField
                   name="paymentMilestone"
@@ -789,7 +780,7 @@ const AddProject = () => {
                 <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">🏷️ Project Type</span>
                 <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
               </div>
-              
+
               <div className="flex flex-wrap gap-2">
                 {typeButtons.map((t) => (
                   <button
@@ -860,7 +851,7 @@ const AddProject = () => {
                           <h5 className="text-sm font-bold text-gray-700 capitalize">{phase.label} Team</h5>
                           <span className="text-xs text-gray-500">{teamAssignment[phase.id].length} members</span>
                         </div>
-                        
+
                         <div className="flex gap-2 mb-3">
                           <select
                             value=""
@@ -889,7 +880,7 @@ const AddProject = () => {
                             <UserPlus size={14} /> Add
                           </button>
                         </div>
-                        
+
                         <div className="flex flex-wrap gap-2">
                           {teamAssignment[phase.id].length === 0 ? (
                             <span className="text-xs text-gray-400 italic">No members assigned</span>
@@ -921,133 +912,103 @@ const AddProject = () => {
             {/* Digital Marketing */}
             {projectType === "digital_marketing" && (
               <div className="space-y-6">
-                {/* Marketing Packages */}
+                {/* Marketing Plans (from API) */}
                 <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
-                    <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">📦 Marketing Package</span>
+                    <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">📦 Marketing Plan</span>
                     <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {Object.values(MARKETING_PACKAGES).map((pkg) => (
-                      <div
-                        key={pkg.id}
-                        onClick={() => handlePackageSelect(pkg.id)}
-                        className={`cursor-pointer rounded-xl p-4 border-2 transition-all ${
-                          selectedPackage?.id === pkg.id
-                            ? 'border-teal-500 bg-teal-50 shadow-lg shadow-teal-500/10'
-                            : 'border-gray-200 hover:border-teal-300 hover:shadow-md'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-bold text-gray-800 text-sm">{pkg.name}</h4>
-                            {pkg.id !== "custom" && (
-                              <span className="inline-block mt-1 px-3 py-1 bg-gradient-to-r from-teal-600 to-teal-500 text-white text-xs font-bold rounded-full">
-                                ₹{pkg.price.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                          {selectedPackage?.id === pkg.id && (
-                            <CheckCircle size={20} className="text-teal-600" />
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">{pkg.description}</p>
-                        <ul className="mt-3 space-y-1">
-                          {pkg.features.slice(0, 3).map((feature, idx) => (
-                            <li key={idx} className="text-xs text-gray-600 flex items-start gap-1.5">
-                              <CheckCircle size={12} className="text-teal-500 mt-0.5 shrink-0" />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                          {pkg.features.length > 3 && (
-                            <li className="text-xs text-teal-600 font-semibold">+{pkg.features.length - 3} more</li>
-                          )}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Custom Services */}
-                {selectedPackage?.id === "custom" && (
-                  <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
-                      <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">🎯 Custom Services</span>
-                      <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
+                  {plansLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-500 py-6 justify-center">
+                      <Loader size={16} className="animate-spin" /> Loading plans...
                     </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {MARKETING_SERVICES.map((service) => (
-                        <label
-                          key={service.id}
-                          className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-all ${
-                            customServices.includes(service.id)
-                              ? 'border-teal-500 bg-teal-50'
-                              : 'border-gray-200 hover:border-teal-200'
+                  ) : marketingPlans.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic text-center py-6">No marketing plans available.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {marketingPlans.map((plan) => (
+                        <div
+                          key={plan._id}
+                          onClick={() => handlePlanSelect(plan._id)}
+                          className={`cursor-pointer rounded-xl p-4 border-2 transition-all ${
+                            selectedPlanId === plan._id
+                              ? 'border-teal-500 bg-teal-50 shadow-lg shadow-teal-500/10'
+                              : 'border-gray-200 hover:border-teal-300 hover:shadow-md'
                           }`}
                         >
-                          <input
-                            type="checkbox"
-                            checked={customServices.includes(service.id)}
-                            onChange={() => toggleCustomService(service.id)}
-                            className="w-4 h-4 accent-teal-600"
-                          />
-                          <span className="text-sm text-gray-700">{service.label}</span>
-                        </label>
+                          <div className="flex items-start justify-between">
+                            <h4 className="font-bold text-gray-800 text-sm flex items-center gap-1.5">
+                              <Megaphone size={15} className="text-teal-600" />
+                              {plan.planName}
+                            </h4>
+                            {selectedPlanId === plan._id && (
+                              <CheckCircle size={20} className="text-teal-600" />
+                            )}
+                          </div>
+
+                          {/* Duration options with price */}
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {plan.durations.map((d) => (
+                              <button
+                                key={d._id}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (selectedPlanId !== plan._id) handlePlanSelect(plan._id);
+                                  handleDurationSelect(d._id);
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                                  selectedPlanId === plan._id && selectedDurationId === d._id
+                                    ? 'bg-teal-600 text-white border-teal-600'
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300'
+                                }`}
+                              >
+                                {d.duration} · ₹{d.price.toLocaleString()}
+                              </button>
+                            ))}
+                          </div>
+
+                          <ul className="mt-3 space-y-1">
+                            {plan.features.slice(0, 4).map((feature, idx) => (
+                              <li key={idx} className="text-xs text-gray-600 flex items-start gap-1.5">
+                                <CheckCircle size={12} className="text-teal-500 mt-0.5 shrink-0" />
+                                <span>{feature}</span>
+                              </li>
+                            ))}
+                            {plan.features.length > 4 && (
+                              <li className="text-xs text-teal-600 font-semibold">+{plan.features.length - 4} more</li>
+                            )}
+                          </ul>
+                        </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Campaign Details */}
+                  {selectedPlanObj && selectedDurationObj && (
+                    <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-xl text-sm text-gray-700">
+                      Selected: <span className="font-semibold">{selectedPlanObj.planName}</span> — {selectedDurationObj.duration} at{" "}
+                      <span className="font-semibold">₹{selectedDurationObj.price.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Marketing Work Days */}
                 <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
-                    <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">📊 Campaign Details</span>
+                    <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">📊 Work Division</span>
                     <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <InputField
-                      label="Campaign Start Date"
-                      type="date"
-                      value={marketingStartDate}
-                      onChange={(e) => {
-                        setMarketingStartDate(e.target.value);
-                        if (e.target.value && !formData.projectStartDate) {
-                          setFormData(prev => ({ ...prev, projectStartDate: e.target.value }));
-                        }
-                      }}
-                    />
-                    <div>
-                      <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Campaign Duration</label>
-                      <select
-                        value={marketingDuration}
-                        onChange={(e) => setMarketingDuration(e.target.value)}
-                        className="w-full h-11 px-4 rounded-xl text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
-                      >
-                        <option value="1">1 Month</option>
-                        <option value="3">3 Months</option>
-                        <option value="6">6 Months</option>
-                        <option value="12">12 Months</option>
-                      </select>
-                    </div>
-                    {selectedPackage?.id === "custom" && (
-                      <InputField
-                        label="Custom Budget (₹)"
-                        type="number"
-                        placeholder="Enter budget"
-                        value={marketingBudget}
-                        onChange={(e) => {
-                          setMarketingBudget(e.target.value);
-                          setFormData(prev => ({ ...prev, projectCost: e.target.value }));
-                        }}
-                      />
-                    )}
-                  </div>
+                  <InputField
+                    label="Marketing Work Days"
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                    value={marketingWorkDays}
+                    onChange={(e) => setMarketingWorkDays(e.target.value)}
+                  />
                 </div>
 
                 {/* Marketing Team */}
@@ -1057,7 +1018,7 @@ const AddProject = () => {
                     <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">👥 Marketing Team</span>
                     <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
                   </div>
-                  
+
                   <div className="p-4 bg-white rounded-xl border border-gray-200">
                     <div className="flex gap-2 mb-3">
                       <select
@@ -1081,7 +1042,7 @@ const AddProject = () => {
                         <UserPlus size={14} /> Add
                       </button>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-2">
                       {marketingTeam.marketing.members.length === 0 ? (
                         <span className="text-xs text-gray-400 italic">No members assigned</span>
@@ -1110,15 +1071,15 @@ const AddProject = () => {
 
             {/* Buttons */}
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => navigate("/projects")}
                 className="flex-1 sm:flex-none sm:w-32 py-3 rounded-xl border-2 border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition-all"
               >
                 Cancel
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={loading}
                 className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-bold text-sm shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
