@@ -112,7 +112,6 @@
 
 // export default DashboardLayout;
 
-
 import React, { useState, useEffect } from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
@@ -209,14 +208,14 @@ const DashboardLayout = ({ isLoggedIn, onLogout }) => {
           />
 
           {/* Outlet with Premium Card Effect */}
-          <main className="flex-grow overflow-x-hidden p-3 md:p-4 lg:p-5">
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl md:rounded-3xl p-3 md:p-4 lg:p-5 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] min-h-full shadow-lg border border-white/30">
+          <main className="flex-grow overflow-x-hidden p-2 sm:p-3 md:p-4 lg:p-5 xl:p-6 2xl:p-8">
+            <div className="bg-white/90 backdrop-blur-xl rounded-xl sm:rounded-2xl md:rounded-3xl p-2 sm:p-3 md:p-4 lg:p-5 xl:p-6 2xl:p-8 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] min-h-full shadow-lg border border-white/30">
               <Outlet />
             </div>
           </main>
           
           {/* Subtle Footer */}
-          <div className="text-center py-3 text-teal-700/60 text-xs tracking-wide">
+          <div className="text-center py-2 sm:py-3 text-teal-700/60 text-[10px] sm:text-xs tracking-wide">
             <span>© 2025 PixelmindSolutions · Enterprise Dashboard</span>
           </div>
         </div>

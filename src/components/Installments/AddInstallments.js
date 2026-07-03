@@ -5,7 +5,7 @@ import {
   FolderPlus, X, CheckCircle, AlertCircle, Loader,
   Calendar, DollarSign, Clock, Plus, Trash2,
   Edit, Save, RefreshCw, Eye, ChevronDown, ChevronUp,
-  Bell, Users, Mail, Phone, Send, MessageSquare
+  Bell, Users, Mail, Phone, Send, MessageSquare, Check
 } from "lucide-react";
 
 const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects/all";
@@ -30,6 +30,8 @@ const AddInstallment = () => {
   const [sendingReminder, setSendingReminder] = useState(false);
   const [selectedReminderInstallment, setSelectedReminderInstallment] = useState(null);
   const [sendingAllReminders, setSendingAllReminders] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [selectedPaidInstallment, setSelectedPaidInstallment] = useState(null);
 
   // Installment form state
   const [installmentForm, setInstallmentForm] = useState({
@@ -96,6 +98,94 @@ const AddInstallment = () => {
       });
     } finally {
       setUpcomingLoading(false);
+    }
+  };
+
+  // Mark installment as paid
+  const markAsPaid = async (installment) => {
+    if (!installment || !selectedProject) return;
+
+    // Check if already paid
+    if (installment.status === 'paid') {
+      Swal.fire({
+        icon: 'info',
+        title: 'Already Paid',
+        text: 'This installment has already been marked as paid.',
+        confirmButtonColor: '#0d9488',
+      });
+      return;
+    }
+
+    // Confirm with user
+    const result = await Swal.fire({
+      title: 'Mark as Paid?',
+      html: `
+        <div class="text-left">
+          <p class="mb-2">Mark this installment as paid:</p>
+          <p class="font-semibold text-gray-800">${installment.title}</p>
+          <p class="text-sm text-gray-600">Amount: <span class="font-semibold">${installment.type === 'percentage' ? `${installment.value}%` : `₹${installment.value?.toLocaleString()}`}</span></p>
+          <p class="text-sm text-gray-600">Due Date: <span class="font-semibold">${installment.dueDate ? new Date(installment.dueDate).toLocaleDateString() : 'N/A'}</span></p>
+          <p class="text-sm text-gray-600 mt-2">Current Status: <span class="font-semibold text-yellow-600">${installment.status?.toUpperCase() || 'PENDING'}</span></p>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, Mark as Paid',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      setMarkingPaid(true);
+      setSelectedPaidInstallment(installment);
+
+      const response = await fetch(
+        `${INSTALLMENT_URL}/${selectedProject._id}/installments/${installment._id}/mark-paid`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${AUTH_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Marked as Paid!',
+          text: `Installment "${installment.title}" has been marked as paid successfully.`,
+          timer: 2000,
+          timerProgressBar: true,
+          showConfirmButton: false,
+        });
+
+        // Refresh project data
+        await refreshProjectData();
+
+        // Also refresh upcoming installments if modal is open
+        if (showUpcomingModal) {
+          await fetchUpcomingInstallments();
+        }
+      } else {
+        throw new Error(data.message || 'Failed to mark installment as paid');
+      }
+    } catch (error) {
+      console.error("Error marking as paid:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message || 'Failed to mark installment as paid. Please try again.',
+        confirmButtonColor: '#0d9488',
+      });
+    } finally {
+      setMarkingPaid(false);
+      setSelectedPaidInstallment(null);
     }
   };
 
@@ -582,6 +672,16 @@ const AddInstallment = () => {
     return diffDays === 1;
   };
 
+  // Check if due date is today or overdue
+  const isOverdue = (dueDate) => {
+    if (!dueDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(0, 0, 0, 0);
+    return due < today;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50/90 via-white to-teal-100/70">
       <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-10">
@@ -845,33 +945,80 @@ const AddInstallment = () => {
                     <div key={installment._id || index} className="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 hover:shadow-md transition-shadow">
                       <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 xs:gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold text-[10px] sm:text-xs flex-shrink-0">
-                              {index + 1}
-                            </div>
-                            <div className="min-w-0">
-                              <h5 className="font-semibold text-gray-800 text-sm sm:text-base truncate">{installment.title}</h5>
-                              <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-[10px] sm:text-xs">
-                                <span className="text-gray-500">
-                                  {installment.type === 'percentage' ? `${installment.value}%` : `₹${installment.value?.toLocaleString()}`}
-                                </span>
-                                <span className="text-gray-300 hidden xs:inline">|</span>
-                                <span className="text-gray-500">
-                                  Due: {installment.dueDate ? new Date(installment.dueDate).toLocaleDateString() : 'N/A'}
-                                </span>
-                                {isDueTomorrow(installment.dueDate) && (
-                                  <span className="px-1.5 sm:px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[8px] sm:text-[10px] font-semibold">
-                                    Due Tomorrow
+                          <div className="flex items-start justify-between gap-3">
+                            {/* Left Side */}
+                            <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold text-[10px] sm:text-xs flex-shrink-0">
+                                {index + 1}
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <h5 className="font-semibold text-gray-800 text-sm sm:text-base truncate">
+                                  {installment.title}
+                                </h5>
+
+                                <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-[10px] sm:text-xs">
+                                  <span className="text-gray-500">
+                                    {installment.type === "percentage"
+                                      ? `${installment.value}%`
+                                      : `₹${installment.value?.toLocaleString()}`}
                                   </span>
-                                )}
+
+                                  <span className="text-gray-300 hidden xs:inline">|</span>
+
+                                  <span className="text-gray-500">
+                                    Due:{" "}
+                                    {installment.dueDate
+                                      ? new Date(installment.dueDate).toLocaleDateString()
+                                      : "N/A"}
+                                  </span>
+
+                                  {isDueTomorrow(installment.dueDate) &&
+                                    installment.status !== "paid" && (
+                                      <span className="px-1.5 sm:px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-[8px] sm:text-[10px] font-semibold">
+                                        Due Tomorrow
+                                      </span>
+                                    )}
+
+                                  {isOverdue(installment.dueDate) &&
+                                    installment.status !== "paid" && (
+                                      <span className="px-1.5 sm:px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-[8px] sm:text-[10px] font-semibold animate-pulse">
+                                        Overdue
+                                      </span>
+                                    )}
+                                </div>
                               </div>
                             </div>
+
+                            {/* Right Side */}
+                            {installment.status !== "paid" && (
+                              <button
+                                onClick={() => markAsPaid(installment)}
+                                disabled={
+                                  markingPaid &&
+                                  selectedPaidInstallment?._id === installment._id
+                                }
+                                className="shrink-0 flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[8px] sm:text-[10px] font-semibold transition-colors disabled:opacity-60"
+                                title="Mark as Paid"
+                              >
+                                {markingPaid &&
+                                  selectedPaidInstallment?._id === installment._id ? (
+                                  <Loader size={12} className="animate-spin" />
+                                ) : (
+                                  <Check size={12} />
+                                )}
+
+                                <span className="hidden sm:inline">Mark Paid</span>
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 flex-wrap">
                           <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-semibold ${getStatusBadge(installment.status)}`}>
                             {installment.status?.toUpperCase() || 'PENDING'}
                           </span>
+
+                          {/* Edit Button */}
                           <button
                             onClick={() => handleEditInstallment(installment)}
                             className="p-1 sm:p-1.5 text-gray-400 hover:text-teal-600 transition-colors rounded-lg hover:bg-teal-50"
@@ -879,6 +1026,8 @@ const AddInstallment = () => {
                           >
                             <Edit size={14} />
                           </button>
+
+                          {/* Delete Button */}
                           <button
                             onClick={() => handleDeleteInstallment(installment._id)}
                             className="p-1 sm:p-1.5 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
@@ -886,6 +1035,8 @@ const AddInstallment = () => {
                           >
                             <Trash2 size={14} />
                           </button>
+
+
                         </div>
                       </div>
                     </div>
@@ -897,7 +1048,7 @@ const AddInstallment = () => {
         </div>
       </div>
 
-      {/* Upcoming Installments Modal - Fixed with high z-index */}
+      {/* Upcoming Installments Modal */}
       {showUpcomingModal && upcomingData && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden shadow-2xl">
@@ -983,18 +1134,34 @@ const AddInstallment = () => {
                               ⚡ Due Tomorrow
                             </span>
                           )}
-                          <button
-                            onClick={() => sendReminder(installment)}
-                            disabled={sendingReminder && selectedReminderInstallment?.installmentId === installment.installmentId}
-                            className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-lg text-[10px] sm:text-xs font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed w-full md:w-auto justify-center"
-                          >
-                            {sendingReminder && selectedReminderInstallment?.installmentId === installment.installmentId ? (
-                              <Loader size={12} className="animate-spin" />
-                            ) : (
-                              <Send size={12} />
+                          <div className="flex flex-col xs:flex-row gap-1 w-full md:w-auto">
+                            {installment.status !== 'paid' && (
+                              <button
+                                onClick={() => markAsPaid(installment)}
+                                disabled={markingPaid && selectedPaidInstallment?.installmentId === installment.installmentId}
+                                className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[8px] sm:text-[10px] font-semibold transition-colors disabled:opacity-60 w-full md:w-auto justify-center"
+                              >
+                                {markingPaid && selectedPaidInstallment?.installmentId === installment.installmentId ? (
+                                  <Loader size={12} className="animate-spin" />
+                                ) : (
+                                  <Check size={12} />
+                                )}
+                                <span>Mark Paid</span>
+                              </button>
                             )}
-                            <span>Send Reminder</span>
-                          </button>
+                            <button
+                              onClick={() => sendReminder(installment)}
+                              disabled={sendingReminder && selectedReminderInstallment?.installmentId === installment.installmentId}
+                              className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white rounded-lg text-[8px] sm:text-[10px] font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed w-full md:w-auto justify-center"
+                            >
+                              {sendingReminder && selectedReminderInstallment?.installmentId === installment.installmentId ? (
+                                <Loader size={12} className="animate-spin" />
+                              ) : (
+                                <Send size={12} />
+                              )}
+                              <span>Send Reminder</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

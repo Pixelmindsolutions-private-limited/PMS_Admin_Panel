@@ -918,7 +918,6 @@
 // export default Sidebar;
 
 
-
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -1021,7 +1020,7 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
       description: 'Leads',
       submenu: [
         { path: '/add-installment', label: 'Installments', icon: <MdAddCircleOutline />, description: 'Create Lead' },
-        { path: '/allRemainders', label: 'Remainder', icon: <MdListAlt />, description: 'All Remainders' },
+        // { path: '/allRemainders', label: 'Remainder', icon: <MdListAlt />, description: 'All Remainders' },
       ],
     },
     {
@@ -1096,87 +1095,94 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
             from { opacity: 0; transform: translateX(-10px); }
             to { opacity: 1; transform: translateX(0); }
           }
+          .sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+          }
+          .sidebar-scroll::-webkit-scrollbar-track {
+            background: rgba(20, 184, 166, 0.05);
+          }
+          .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(20, 184, 166, 0.3);
+            border-radius: 10px;
+          }
+          .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(20, 184, 166, 0.6);
+          }
         `
       }} />
 
-      <div style={{
-        width: isMobile ? '300px' : (isTablet ? '280px' : '280px'),
-        position: 'fixed',
-        height: '100vh',
-        left: isOpen ? '0' : (isMobile ? '-300px' : '-280px'),
-        transition: 'left 0.4s cubic-bezier(0.2, 0.9, 0.4, 1)',
-        zIndex: 1100,
-        display: 'flex',
-        flexDirection: 'column',
-      }} className="bg-gradient-to-br from-teal-900 via-teal-800 to-teal-900 shadow-[20px_0_40px_rgba(0,77,77,0.25)] border-r border-white/10 animate-[slideInSidebar_0.5s_cubic-bezier(0.2,0.9,0.4,1)]">
-        
+      <div 
+        className={`fixed h-screen flex flex-col transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] z-[1100] bg-gradient-to-br from-teal-900 via-teal-800 to-teal-900 shadow-[20px_0_40px_rgba(0,77,77,0.25)] border-r border-white/10 animate-[slideInSidebar_0.5s_cubic-bezier(0.2,0.9,0.4,1)] ${
+          isMobile ? 'w-[280px] sm:w-[300px]' : 'w-[260px] sm:w-[270px] md:w-[280px]'
+        } ${isOpen ? 'left-0' : isMobile ? '-left-[280px] sm:-left-[300px]' : '-left-[260px] sm:-left-[270px] md:-left-[280px]'}`}
+      >
         {/* Premium Header with Close */}
-        <div className="bg-white/5 border-b border-teal-400/20 backdrop-blur-sm flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-2xl flex items-center justify-center shadow-lg shadow-teal-400/30">
-              <span className="font-bold text-white text-2xl">P</span>
+        <div className="bg-white/5 border-b border-teal-400/20 backdrop-blur-sm flex items-center justify-between p-3 sm:p-4 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 bg-light rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-teal-400/30 shrink-0">
+              <img src="/logo2.png" alt="Logo" className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
             </div>
-            <div>
-              <h5 className="mb-0 font-bold text-white tracking-wide">Pixelmind</h5>
-              <span className="bg-teal-400/25 px-2 py-0.5 rounded-full text-xs font-semibold tracking-wide text-teal-300 border border-teal-400/40">
-                v3.0 · ULTRA
+            <div className="min-w-0">
+              <h5 className="mb-0 font-bold text-white tracking-wide text-sm sm:text-base truncate">Pixelmindsolutions</h5>
+              <span className="bg-teal-400/25 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-xs font-semibold tracking-wide text-teal-300 border border-teal-400/40 inline-block">
+                CRM
               </span>
             </div>
           </div>
           {isMobile && (
             <button
               onClick={onClose}
-              className="bg-white/10 border-none w-10 h-10 rounded-xl text-white flex items-center justify-center transition-all duration-300 hover:bg-white/20"
+              className="bg-white/10 border-none w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-xl text-white flex items-center justify-center transition-all duration-300 hover:bg-white/20 shrink-0"
             >
-              <MdClose size={22} />
+              <MdClose size={18} className="sm:text-[20px] md:text-[22px]" />
             </button>
           )}
         </div>
 
         {/* Scrollable Menu Area */}
-        <div className="flex-grow overflow-auto py-3 scrollbar-thin scrollbar-track-teal-500/5 scrollbar-thumb-teal-400/30 hover:scrollbar-thumb-teal-400/60">
+        <div className="flex-grow overflow-y-auto overflow-x-hidden py-2 sm:py-3 sidebar-scroll">
           {menuItems.map((item, index) => (
             <div key={item.id || item.path} style={{ animation: `slideInSidebar 0.3s ease ${index * 0.05}s backwards` }}>
               {item.submenu ? (
                 <>
                   <div
-                    className="group flex items-center justify-between cursor-pointer rounded-2xl mx-3 my-1.5 px-4 py-3 text-white/85 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] hover:bg-white/6 hover:text-white hover:pl-5 relative overflow-hidden before:absolute before:left-0 before:top-0 before:w-1 before:h-full before:bg-gradient-to-b before:from-teal-400 before:to-cyan-400 before:scale-y-0 before:transition-transform before:duration-300 hover:before:scale-y-100"
+                    className="group flex items-center justify-between cursor-pointer rounded-xl sm:rounded-2xl mx-2 sm:mx-3 my-1 px-3 sm:px-4 py-2.5 sm:py-3 text-white/85 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] hover:bg-white/6 hover:text-white hover:pl-4 sm:hover:pl-5 relative overflow-hidden before:absolute before:left-0 before:top-0 before:w-0.5 sm:before:w-1 before:h-full before:bg-gradient-to-b before:from-teal-400 before:to-cyan-400 before:scale-y-0 before:transition-transform before:duration-300 hover:before:scale-y-100"
                     onClick={() => toggleSubmenu(item.id)}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center transition-all duration-300 bg-white/5 text-white/90 group-hover:bg-teal-400/30 group-hover:text-teal-300 text-lg">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-[38px] md:h-[38px] rounded-xl flex items-center justify-center transition-all duration-300 bg-white/5 text-white/90 group-hover:bg-teal-400/30 group-hover:text-teal-300 text-base sm:text-lg shrink-0">
                         {item.icon}
                       </div>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm">{item.label}</span>
-                        <span className="text-xs opacity-60">{item.description}</span>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-xs sm:text-sm truncate">{item.label}</span>
+                        <span className="text-[8px] sm:text-[10px] opacity-60 truncate">{item.description}</span>
                       </div>
                     </div>
-                    <span className={`transition-transform duration-400 opacity-70 ${openMenus[item.id] ? 'rotate-180' : 'rotate-0'}`}>
-                      {openMenus[item.id] ? <MdExpandLess size={20} /> : <MdExpandMore size={20} />}
+                    <span className={`transition-transform duration-400 opacity-70 shrink-0 ml-1 ${openMenus[item.id] ? 'rotate-180' : 'rotate-0'}`}>
+                      {openMenus[item.id] ? <MdExpandLess size={16} className="sm:text-[18px] md:text-[20px]" /> : <MdExpandMore size={16} className="sm:text-[18px] md:text-[20px]" />}
                     </span>
                   </div>
 
                   {openMenus[item.id] && (
-                    <div className="ml-5 pl-4 border-l border-teal-400/30 relative mt-1 mb-2">
+                    <div className="ml-4 sm:ml-5 pl-3 sm:pl-4 border-l border-teal-400 relative mt-1 mb-2">
                       {item.submenu.map((subItem, subIndex) => (
                         <Link
                           key={subItem.path}
                           to={subItem.path}
-                          className={`flex items-center px-4 py-2.5 my-1 text-white/75 rounded-xl transition-all duration-300 text-[13px] relative hover:bg-teal-400/15 hover:text-white hover:pl-[22px] ${
+                          className={`flex items-center px-3 sm:px-4 py-2 sm:py-2.5 my-0.5 sm:my-1 text-white/75 rounded-xl transition-all duration-300 text-[11px] sm:text-[13px] relative hover:bg-teal-400/15 hover:text-white hover:pl-4 sm:hover:pl-[22px] ${
                             location.pathname === subItem.path 
-                              ? 'bg-teal-400/20 text-white border-l-3 border-teal-400 rounded-l-xl' 
+                              ? 'bg-teal-400/20 text-white border-l-2 sm:border-l-3 border-teal-400 rounded-l-xl' 
                               : ''
                           }`}
                           onClick={handleLinkClick}
                           style={{ animation: `slideInSubmenu 0.2s ease ${subIndex * 0.03}s backwards` }}
                         >
-                          <span className="mr-3.5 text-base opacity-90">
+                          <span className="mr-2 sm:mr-3.5 text-sm sm:text-base opacity-90 shrink-0">
                             {subItem.icon}
                           </span>
-                          <div className="flex flex-col">
-                            <span className="text-[13px] font-medium">{subItem.label}</span>
-                            <span className="text-[10px] opacity-60">{subItem.description}</span>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[11px] sm:text-[13px] font-medium truncate">{subItem.label}</span>
+                            <span className="text-[8px] sm:text-[10px] opacity-60 truncate">{subItem.description}</span>
                           </div>
                         </Link>
                       ))}
@@ -1186,20 +1192,20 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
               ) : (
                 <Link
                   to={item.path}
-                  className={`group flex items-center gap-3 no-underline rounded-2xl mx-3 my-1.5 px-4 py-3 text-white/85 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] hover:bg-white/6 hover:text-white hover:pl-5 relative overflow-hidden before:absolute before:left-0 before:top-0 before:w-1 before:h-full before:bg-gradient-to-b before:from-teal-400 before:to-cyan-400 before:scale-y-0 before:transition-transform before:duration-300 hover:before:scale-y-100 ${
+                  className={`group flex items-center gap-2 sm:gap-3 no-underline rounded-xl sm:rounded-2xl mx-2 sm:mx-3 my-1 px-3 sm:px-4 py-2.5 sm:py-3 text-white/85 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] hover:bg-white/6 hover:text-white hover:pl-4 sm:hover:pl-5 relative overflow-hidden before:absolute before:left-0 before:top-0 before:w-0.5 sm:before:w-1 before:h-full before:bg-gradient-to-b before:from-teal-400 before:to-cyan-400 before:scale-y-0 before:transition-transform before:duration-300 hover:before:scale-y-100 ${
                     location.pathname === item.path 
-                      ? 'bg-gradient-to-r from-teal-400/20 to-teal-400/5 text-white border-l-4 border-teal-400 rounded-l-xl' 
+                      ? 'bg-gradient-to-r from-teal-400/20 to-teal-400/5 text-white border-l-2 sm:border-l-4 border-teal-400 rounded-l-xl' 
                       : ''
                   }`}
                   onClick={handleLinkClick}
                 >
-                  <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center transition-all duration-300 bg-white/5 text-white/90 group-hover:bg-teal-400/30 group-hover:text-teal-300 text-lg">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-[38px] md:h-[38px] rounded-xl flex items-center justify-center transition-all duration-300 bg-white/5 text-white/90 group-hover:bg-teal-400/30 group-hover:text-teal-300 text-base sm:text-lg shrink-0">
                     {item.icon}
                   </div>
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-sm">{item.label}</span>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-semibold text-xs sm:text-sm truncate">{item.label}</span>
                     {item.description && (
-                      <span className="text-xs opacity-60">{item.description}</span>
+                      <span className="text-[9px] sm:text-xs opacity-60 truncate">{item.description}</span>
                     )}
                   </div>
                 </Link>
@@ -1208,45 +1214,45 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
           ))}
 
           {/* Divider */}
-          <div className="h-px bg-white/10 my-5 mx-4" />
+          <div className="h-px bg-white/10 my-3 sm:my-5 mx-3 sm:mx-4" />
 
           {/* Bottom Menu Items */}
           {bottomMenuItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className="group flex items-center gap-3 no-underline rounded-2xl mx-3 my-1.5 px-4 py-3 text-white/85 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] hover:bg-white/6 hover:text-white hover:pl-5 relative overflow-hidden before:absolute before:left-0 before:top-0 before:w-1 before:h-full before:bg-gradient-to-b before:from-teal-400 before:to-cyan-400 before:scale-y-0 before:transition-transform before:duration-300 hover:before:scale-y-100"
+              className="group flex items-center gap-2 sm:gap-3 no-underline rounded-xl sm:rounded-2xl mx-2 sm:mx-3 my-1 px-3 sm:px-4 py-2.5 sm:py-3 text-white/85 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] hover:bg-white/6 hover:text-white hover:pl-4 sm:hover:pl-5 relative overflow-hidden before:absolute before:left-0 before:top-0 before:w-0.5 sm:before:w-1 before:h-full before:bg-gradient-to-b before:from-teal-400 before:to-cyan-400 before:scale-y-0 before:transition-transform before:duration-300 hover:before:scale-y-100"
               onClick={handleLinkClick}
             >
-              <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center transition-all duration-300 bg-white/5 text-white/90 group-hover:bg-teal-400/30 group-hover:text-teal-300 text-lg">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-[38px] md:h-[38px] rounded-xl flex items-center justify-center transition-all duration-300 bg-white/5 text-white/90 group-hover:bg-teal-400/30 group-hover:text-teal-300 text-base sm:text-lg shrink-0">
                 {item.icon}
               </div>
-              <div className="flex flex-col">
-                <span className="font-semibold text-sm">{item.label}</span>
-                <span className="text-xs opacity-60">{item.description}</span>
+              <div className="flex flex-col min-w-0">
+                <span className="font-semibold text-xs sm:text-sm truncate">{item.label}</span>
+                <span className="text-[9px] sm:text-xs opacity-60 truncate">{item.description}</span>
               </div>
             </Link>
           ))}
 
           {/* Ultra Premium Logout */}
           <div
-            className="flex items-center gap-3 cursor-pointer rounded-2xl mx-3 my-1.5 p-3.5 transition-all duration-400 hover:-translate-y-0.5 bg-red-500/10 border border-red-500/20 hover:bg-red-500/15 hover:border-red-500/40"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer rounded-xl sm:rounded-2xl mx-2 sm:mx-3 my-1.5 p-2.5 sm:p-3.5 transition-all duration-400 hover:-translate-y-0.5 bg-red-500/10 border border-red-500/20 hover:bg-red-500/15 hover:border-red-500/40"
             onClick={handleLogout}
           >
-            <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center bg-red-500/10 text-red-400 text-lg">
-              <MdLogout size={20} />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-[38px] md:h-[38px] rounded-xl flex items-center justify-center bg-red-500/10 text-red-400 text-base sm:text-lg shrink-0">
+              <MdLogout size={18} className="sm:text-[20px]" />
             </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-red-300 text-sm">Logout</span>
-              <span className="text-xs opacity-60 text-red-300/70">End session</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-red-300 text-xs sm:text-sm truncate">Logout</span>
+              <span className="text-[9px] sm:text-xs opacity-60 text-red-300/70 truncate">End session</span>
             </div>
           </div>
         </div>
 
         {/* Premium Footer */}
-        <div className="p-3 text-center border-t border-white/5">
-          <span className="text-white/40 text-xs">
-            SYSTEM · SECURE
+        <div className="p-2 sm:p-3 text-center border-t border-white/5 shrink-0">
+          <span className="text-white/40 text-[8px] sm:text-[10px] md:text-xs">
+            PMS · CRM
           </span>
         </div>
       </div>
