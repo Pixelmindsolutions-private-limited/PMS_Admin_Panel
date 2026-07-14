@@ -24,7 +24,7 @@ import {
 } from "react-icons/md";
 import { useLocation } from "react-router-dom";
 
-const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff" || "https://pmsbackend.pixelmindsolutions.com/api/staff" ;
+const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff" || "https://pmsbackend.pixelmindsolutions.com/api/staff";
 
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;
@@ -59,13 +59,13 @@ const Staff = () => {
           "Content-Type": "application/json",
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const json = await response.json();
-      
+
       if (json.success && Array.isArray(json.data)) {
         setStaffList(json.data);
       } else {
@@ -79,8 +79,8 @@ const Staff = () => {
     }
   };
 
-  useEffect(() => { 
-    fetchStaff(); 
+  useEffect(() => {
+    fetchStaff();
   }, []);
 
   // Statistics calculation
@@ -103,8 +103,8 @@ const Staff = () => {
       const matchRole = roleFilter ? s.role === roleFilter : true;
       const matchStatus =
         statusFilter === "" ? true
-        : statusFilter === "active" ? s.isActive
-        : !s.isActive;
+          : statusFilter === "active" ? s.isActive
+            : !s.isActive;
       return matchSearch && matchRole && matchStatus;
     });
   }, [search, roleFilter, statusFilter, staffList]);
@@ -114,8 +114,8 @@ const Staff = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
 
-  useEffect(() => { 
-    setCurrentPage(1); 
+  useEffect(() => {
+    setCurrentPage(1);
   }, [search, roleFilter, statusFilter, itemsPerPage]);
 
   // Delete staff by employeeId
@@ -123,12 +123,12 @@ const Staff = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/${employeeId}`, {
         method: "DELETE",
-        headers: { 
+        headers: {
           Authorization: `Bearer ${AUTH_TOKEN}`,
           "Content-Type": "application/json"
         },
       });
-      
+
       if (response.ok) {
         setStaffList((prev) => prev.filter((s) => s.employeeId !== employeeId));
         alert(`Employee ${employeeName} deleted successfully`);
@@ -245,10 +245,10 @@ const Staff = () => {
         {/* STAT CARDS */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 lg:gap-4 mb-5 sm:mb-6">
           {[
-            { label: "Total Staff",  value: stats.total,       icon: "👥", badge: "bg-teal-100 text-teal-700",    dot: "bg-teal-400" },
-            { label: "Active",       value: stats.active,      icon: "✅", badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-400" },
-            { label: "Inactive",     value: stats.inactive,    icon: "⏸️", badge: "bg-gray-100 text-gray-500",    dot: "bg-gray-300" },
-            { label: "Unique Roles", value: stats.uniqueRoles, icon: "🏷️", badge: "bg-blue-100 text-blue-700",   dot: "bg-blue-400" },
+            { label: "Total Staff", value: stats.total, icon: "👥", badge: "bg-teal-100 text-teal-700", dot: "bg-teal-400" },
+            { label: "Active", value: stats.active, icon: "✅", badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-400" },
+            { label: "Inactive", value: stats.inactive, icon: "⏸️", badge: "bg-gray-100 text-gray-500", dot: "bg-gray-300" },
+            { label: "Unique Roles", value: stats.uniqueRoles, icon: "🏷️", badge: "bg-blue-100 text-blue-700", dot: "bg-blue-400" },
           ].map((s, i) => (
             <div key={i} className="stat-card rounded-2xl p-3 sm:p-4">
               <div className="flex items-center justify-between mb-2">
@@ -278,14 +278,12 @@ const Staff = () => {
             <div className="flex items-center gap-2">
               <div className="bg-gray-100 rounded-xl p-0.5 flex">
                 <button onClick={() => setViewMode("table")}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    viewMode === "table" ? "bg-white shadow text-teal-700" : "text-gray-500"}`}>
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === "table" ? "bg-white shadow text-teal-700" : "text-gray-500"}`}>
                   <MdTableRows size={14} />
                   <span className="hidden sm:inline">Table</span>
                 </button>
                 <button onClick={() => setViewMode("card")}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    viewMode === "card" ? "bg-white shadow text-teal-700" : "text-gray-500"}`}>
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === "card" ? "bg-white shadow text-teal-700" : "text-gray-500"}`}>
                   <MdGridView size={14} />
                   <span className="hidden sm:inline">Cards</span>
                 </button>
@@ -393,11 +391,16 @@ const Staff = () => {
                       <td className="py-3 px-3 sm:px-4">
                         <div className="flex items-center gap-2.5">
                           {staff.profileImage && !staff.profileImage.startsWith("/data/user") ? (
-                            <img src={staff.profileImage} alt={staff.employeeName}
-                              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-teal-100 shrink-0" />
+                            <img
+                              src={staff.profileImage}
+                              alt={staff.employeeName}
+                              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-teal-100 shrink-0"
+                            />
                           ) : (
                             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shrink-0 border-2 border-teal-50">
-                              <FaUserTie className="text-white" size={11} />
+                              <span className="text-white font-semibold text-sm">
+                                {staff.employeeName?.charAt(0).toUpperCase()}
+                              </span>
                             </div>
                           )}
                           <div className="min-w-0">
@@ -421,22 +424,22 @@ const Staff = () => {
                         <span className="px-2 py-1 bg-teal-50 text-teal-700 rounded-lg text-xs font-semibold border border-teal-100 whitespace-nowrap">
                           {staff.role}
                         </span>
-                       </td>
+                      </td>
                       <td className="h-sm py-3 px-3 sm:px-4">
                         <span className={`status-pill ${staff.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${staff.isActive ? "bg-emerald-500" : "bg-gray-400"}`} />
                           {staff.isActive ? "Active" : "Inactive"}
                         </span>
-                       </td>
+                      </td>
                       <td className="py-3 px-3 sm:px-4">
                         <div className="flex items-center gap-1">
                           <button onClick={() => navigate(`/staff/${staff.employeeId}`)}
                             className="btn-act bg-teal-50 hover:bg-teal-100 text-teal-600" title="View">
                             <MdRemoveRedEye size={15} />
                           </button>
-                          <button 
+                          <button
                             onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}  // ✅ Use employeeId
-                            className="btn-act bg-blue-50 hover:bg-blue-100 text-blue-600" 
+                            className="btn-act bg-blue-50 hover:bg-blue-100 text-blue-600"
                             title="Edit"
                           >
                             <MdEdit size={15} />
@@ -446,7 +449,7 @@ const Staff = () => {
                             <MdDelete size={15} />
                           </button>
                         </div>
-                       </td>
+                      </td>
                     </tr>
                   )) : (
                     <tr>
@@ -459,11 +462,11 @@ const Staff = () => {
                             Add First Employee
                           </button>
                         </div>
-                       </td>
+                      </td>
                     </tr>
                   )}
                 </tbody>
-               </table>
+              </table>
             </div>
             {totalPages > 1 && (
               <Pagination totalPages={totalPages} currentPage={currentPage} setCurrentPage={setCurrentPage}
@@ -484,11 +487,16 @@ const Staff = () => {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       {staff.profileImage && !staff.profileImage.startsWith("/data/user") ? (
-                        <img src={staff.profileImage} alt={staff.employeeName}
-                          className="w-10 h-10 rounded-xl object-cover border-2 border-teal-100 shrink-0" />
+                        <img
+                          src={staff.profileImage}
+                          alt={staff.employeeName}
+                          className="w-10 h-10 rounded-xl object-cover border-2 border-teal-100 shrink-0"
+                        />
                       ) : (
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shrink-0 border-2 border-teal-50">
-                          <FaUserTie className="text-white" size={14} />
+                          <span className="text-white font-bold text-lg">
+                            {staff.employeeName?.charAt(0).toUpperCase() || "?"}
+                          </span>
                         </div>
                       )}
                       <div className="min-w-0">
@@ -530,7 +538,7 @@ const Staff = () => {
                       className="btn-act flex-1 w-auto h-8 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-600">
                       <MdRemoveRedEye size={14} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}  // ✅ Use employeeId
                       className="btn-act flex-1 w-auto h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
                     >
@@ -588,8 +596,7 @@ const Pagination = ({ totalPages, currentPage, setCurrentPage, startIndex, items
         </p>
         <div className="flex items-center gap-1 flex-wrap">
           <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => p - 1)}
-            className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs transition-all border ${
-              currentPage === 1 ? "text-gray-300 border-gray-100 bg-gray-50 cursor-not-allowed"
+            className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs transition-all border ${currentPage === 1 ? "text-gray-300 border-gray-100 bg-gray-50 cursor-not-allowed"
               : "text-teal-700 border-teal-200 hover:bg-teal-50 bg-white"}`}>
             ← Prev
           </button>
@@ -598,17 +605,15 @@ const Pagination = ({ totalPages, currentPage, setCurrentPage, startIndex, items
               <span key={i} className="px-1 text-gray-400 text-xs">…</span>
             ) : (
               <button key={i} onClick={() => setCurrentPage(p.value)}
-                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg font-bold text-xs transition-all ${
-                  currentPage === p.value
-                    ? "bg-teal-600 text-white shadow-md shadow-teal-500/30"
-                    : "hover:bg-teal-50 text-gray-600 bg-white border border-gray-100"}`}>
+                className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg font-bold text-xs transition-all ${currentPage === p.value
+                  ? "bg-teal-600 text-white shadow-md shadow-teal-500/30"
+                  : "hover:bg-teal-50 text-gray-600 bg-white border border-gray-100"}`}>
                 {p.value}
               </button>
             )
           )}
           <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => p + 1)}
-            className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs transition-all border ${
-              currentPage === totalPages ? "text-gray-300 border-gray-100 bg-gray-50 cursor-not-allowed"
+            className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs transition-all border ${currentPage === totalPages ? "text-gray-300 border-gray-100 bg-gray-50 cursor-not-allowed"
               : "text-teal-700 border-teal-200 hover:bg-teal-50 bg-white"}`}>
             Next →
           </button>

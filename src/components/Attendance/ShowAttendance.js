@@ -170,8 +170,8 @@ const ViewToggle = ({ viewMode, setViewMode }) => (
         key={mode}
         onClick={() => setViewMode(mode)}
         className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === mode
-            ? "bg-white text-teal-700 shadow-sm"
-            : "text-gray-500 hover:text-teal-600"
+          ? "bg-white text-teal-700 shadow-sm"
+          : "text-gray-500 hover:text-teal-600"
           }`}
       >
         {icon}
@@ -216,6 +216,7 @@ const AttTable = ({ records, showName, onRowClick }) => (
       <thead>
         <tr className="bg-gradient-to-r from-teal-700 to-teal-600 text-white">
           <th className="py-3 px-3 sm:px-4 text-left text-xs font-semibold w-8">#</th>
+          <th className="py-3 px-3 sm:px-4 text-left text-xs font-semibold w-8">EmployeeId</th>
           {showName && (
             <th className="py-3 px-3 sm:px-4 text-left text-xs font-semibold whitespace-nowrap">
               Employee
@@ -239,11 +240,16 @@ const AttTable = ({ records, showName, onRowClick }) => (
               key={rec._id || i}
               onClick={() => onRowClick?.(rec)}
               className={`border-b border-gray-50 transition-colors ${onRowClick
-                  ? "cursor-pointer hover:bg-teal-50/60"
-                  : "hover:bg-gray-50/50"
+                ? "cursor-pointer hover:bg-teal-50/60"
+                : "hover:bg-gray-50/50"
                 }`}
             >
               <td className="py-3 px-3 sm:px-4 text-xs text-gray-400">{i + 1}</td>
+              <td className="py-3 px-3 sm:px-4">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-semibold">
+                  {rec.staffId}
+                </span>
+              </td>
               {showName && (
                 <td className="py-3 px-3 sm:px-4">
                   <div className="flex items-center gap-2">

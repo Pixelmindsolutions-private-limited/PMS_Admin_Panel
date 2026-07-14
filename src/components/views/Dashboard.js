@@ -9,6 +9,7 @@ import {
   FolderKanban, Smartphone, Globe, Megaphone, Users,
   UserPlus, FilePlus, BookOpen, ClipboardList, Zap,
 } from "lucide-react";
+import { useNavigate } from "react-router";
 
 /* ─── Static chart data ─── */
 const trendData = [
@@ -35,32 +36,32 @@ const fmtDate = (iso) =>
   });
 
 const urgencyClasses = (days) => {
-  if (days < 0)  return "bg-red-50 text-red-600 border border-red-200";
+  if (days < 0) return "bg-red-50 text-red-600 border border-red-200";
   if (days <= 7) return "bg-amber-50 text-amber-600 border border-amber-200";
-  return               "bg-emerald-50 text-emerald-600 border border-emerald-200";
+  return "bg-emerald-50 text-emerald-600 border border-emerald-200";
 };
 
 const statusClasses = {
-  active:    "bg-teal-50 text-teal-700 border border-teal-200",
+  active: "bg-teal-50 text-teal-700 border border-teal-200",
   completed: "bg-sky-50 text-sky-700 border border-sky-200",
   "on hold": "bg-amber-50 text-amber-700 border border-amber-200",
 };
 
 const STAT_MAP = {
-  Projects:  { icon: FolderKanban, num: "text-teal-600",    icon_bg: "bg-teal-50",    bar: "bg-teal-500",    orb: "bg-teal-400"    },
-  Apps:      { icon: Smartphone,   num: "text-emerald-600", icon_bg: "bg-emerald-50", bar: "bg-emerald-500", orb: "bg-emerald-400" },
-  Websites:  { icon: Globe,        num: "text-sky-600",     icon_bg: "bg-sky-50",     bar: "bg-sky-500",     orb: "bg-sky-400"     },
-  Marketing: { icon: Megaphone,    num: "text-pink-600",    icon_bg: "bg-pink-50",    bar: "bg-pink-500",    orb: "bg-pink-400"    },
-  Staff:     { icon: Users,        num: "text-violet-600",  icon_bg: "bg-violet-50",  bar: "bg-violet-500",  orb: "bg-violet-400"  },
+  Projects: { link: '/projects', icon: FolderKanban, num: "text-teal-600", icon_bg: "bg-teal-50", bar: "bg-teal-500", orb: "bg-teal-400" },
+  Apps: { link: '/projects', icon: Smartphone, num: "text-emerald-600", icon_bg: "bg-emerald-50", bar: "bg-emerald-500", orb: "bg-emerald-400" },
+  Websites: { link: '/projects', icon: Globe, num: "text-sky-600", icon_bg: "bg-sky-50", bar: "bg-sky-500", orb: "bg-sky-400" },
+  Marketing: { link: '/projects', icon: Megaphone, num: "text-pink-600", icon_bg: "bg-pink-50", bar: "bg-pink-500", orb: "bg-pink-400" },
+  Staff: { link: '/staff', icon: Users, num: "text-violet-600", icon_bg: "bg-violet-50", bar: "bg-violet-500", orb: "bg-violet-400" },
 };
 
 const PIE_COLORS = ["#0891b2", "#059669", "#e11d48", "#f59e0b"];
 
 const QUICK_LINKS = [
-  { label: "Create Staff",     icon: UserPlus,      gradient: "from-violet-500 to-violet-600", shadow: "shadow-violet-200", route: "/staff/create"      },
-  { label: "Create Project",   icon: FilePlus,      gradient: "from-teal-500 to-teal-600",     shadow: "shadow-teal-200",   route: "/projects/create"   },
-  { label: "Create Worksheet", icon: BookOpen,      gradient: "from-sky-500 to-sky-600",       shadow: "shadow-sky-200",    route: "/worksheets/create" },
-  { label: "Mark Attendance",  icon: ClipboardList, gradient: "from-amber-500 to-orange-500",  shadow: "shadow-amber-200",  route: "/attendance/mark"   },
+  { label: "Create Staff", icon: UserPlus, gradient: "from-violet-500 to-violet-600", shadow: "shadow-violet-200", route: "/staff/create" },
+  { label: "Create Project", icon: FilePlus, gradient: "from-teal-500 to-teal-600", shadow: "shadow-teal-200", route: "/projects/create" },
+  { label: "Create Worksheet", icon: BookOpen, gradient: "from-sky-500 to-sky-600", shadow: "shadow-sky-200", route: "/worksheets/create" },
+  { label: "Mark Attendance", icon: ClipboardList, gradient: "from-amber-500 to-orange-500", shadow: "shadow-amber-200", route: "/attendance/mark" },
 ];
 
 /* ─── Animated counter ─── */
@@ -94,11 +95,16 @@ const ChartTip = ({ active, payload, label }) =>
   ) : null;
 
 /* ─── Stat Card ─── */
-const StatCard = ({ label, count }) => {
+const StatCard = ({ link, label, count }) => {
+
+  const navigate = useNavigate();
+
+  console.log("Link :", link)
+
   const m = STAT_MAP[label] || STAT_MAP.Projects;
   const Icon = m.icon;
   return (
-    <div className="bg-white rounded-2xl p-3 sm:p-4 relative overflow-hidden border border-slate-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200 cursor-default">
+    <div onClick={() => navigate(link)} className="bg-white rounded-2xl p-3 sm:p-4 relative overflow-hidden border border-slate-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200 cursor-default">
       <div className={`absolute -top-6 -right-6 w-20 h-20 rounded-full opacity-10 ${m.orb}`} />
       <div className="flex items-start justify-between mb-2 sm:mb-3">
         <div className={`w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center ${m.icon_bg}`}>
@@ -129,18 +135,18 @@ const CardHead = ({ children }) => (
 
 /* ══════════════════════════════ MAIN ══════════════════════════════ */
 const Dashboard = () => {
-  const [data, setData]       = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [error, setError] = useState(null);
 
   const adminDetails = (() => {
     try { return JSON.parse(sessionStorage.getItem("adminDetails") || "{}"); }
     catch { return {}; }
   })();
 
-  const token     = adminDetails?.token     || "";
+  const token = adminDetails?.token || "";
   const adminName = adminDetails?.adminName || "Super Admin";
-  const adminId   = adminDetails?.adminId   || "69a963c38c12c50041a09932";
+  const adminId = adminDetails?.adminId || "69a963c38c12c50041a09932";
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -156,16 +162,16 @@ const Dashboard = () => {
         setError(err.message);
         setData({
           stats: [
-            { label: "Projects",  count: 3, color: "#009788" },
-            { label: "Apps",      count: 1, color: "#4CAF50" },
-            { label: "Websites",  count: 2, color: "#FFC107" },
-            { label: "Marketing", count: 0, color: "#E91E63" },
-            { label: "Staff",     count: 5, color: "#9C27B0" },
+            { link: '/projects', label: "Projects", count: 3, color: "#009788" },
+            { link: '/projects', label: "Apps", count: 1, color: "#4CAF50" },
+            { link: '/projects', label: "Websites", count: 2, color: "#FFC107" },
+            { link: '/projects', label: "Marketing", count: 0, color: "#E91E63" },
+            { link: '/staff', label: "Staff", count: 5, color: "#9C27B0" },
           ],
           projects: [
-            { _id: "69afe130e0956f30b3068434", projectId: "pms111", projectName: "pms mobil apps 111", clientName: "vijay",  status: "active", deadlineDate: "2026-06-10T00:00:00.000Z", daysRemaining: 84  },
-            { _id: "69aaa1218d189942ba465b3c", projectId: "pms",    projectName: "pms mobil apps",     clientName: "vebdrj", status: "active", deadlineDate: "2026-03-06T00:00:00.000Z", daysRemaining: -12 },
-            { _id: "69a97ea6b50875a648fdddbb", projectId: "001",    projectName: "Jjj",                clientName: "hhh",    status: "active", deadlineDate: "2026-03-20T00:00:00.000Z", daysRemaining: 2   },
+            { _id: "69afe130e0956f30b3068434", projectId: "pms111", projectName: "pms mobil apps 111", clientName: "vijay", status: "active", deadlineDate: "2026-06-10T00:00:00.000Z", daysRemaining: 84 },
+            { _id: "69aaa1218d189942ba465b3c", projectId: "pms", projectName: "pms mobil apps", clientName: "vebdrj", status: "active", deadlineDate: "2026-03-06T00:00:00.000Z", daysRemaining: -12 },
+            { _id: "69a97ea6b50875a648fdddbb", projectId: "001", projectName: "Jjj", clientName: "hhh", status: "active", deadlineDate: "2026-03-20T00:00:00.000Z", daysRemaining: 2 },
           ],
           deadlines: [
             { id: "69a97ea6b50875a648fdddbb", projectId: "001", name: "Jjj", clientName: "hhh", deadline: "2026-03-20T00:00:00.000Z", daysRemaining: 2 },
@@ -190,7 +196,7 @@ const Dashboard = () => {
 
   const { stats, projects, deadlines, counts } = data;
   const pieData = stats.filter((s) => s.label !== "Staff" && s.label !== "Projects");
-  const maxPie  = Math.max(...pieData.map((p) => p.count), 1);
+  const maxPie = Math.max(...pieData.map((p) => p.count), 1);
 
   return (
     <div className="bg-slate-50 min-h-screen w-full">
@@ -232,7 +238,7 @@ const Dashboard = () => {
 
         {/* ── STAT CARDS ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-          {stats.map((s) => <StatCard key={s.label} label={s.label} count={s.count} />)}
+          {stats.map((s) => <StatCard key={s.label} link={s.link} label={s.label} count={s.count} />)}
         </div>
 
         {/* ── CHARTS ── */}
@@ -263,7 +269,7 @@ const Dashboard = () => {
                   <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} width={24} />
                   <Tooltip content={<ChartTip />} />
                   <Area type="monotone" dataKey="projects" name="Projects" stroke="#0d9488" strokeWidth={2.5} fill="url(#gProj)" dot={{ fill: "#0d9488", r: 3, strokeWidth: 0 }} />
-                  <Area type="monotone" dataKey="staff"    name="Staff"    stroke="#7c3aed" strokeWidth={2}   fill="url(#gStaff)" dot={{ fill: "#7c3aed", r: 3, strokeWidth: 0 }} />
+                  <Area type="monotone" dataKey="staff" name="Staff" stroke="#7c3aed" strokeWidth={2} fill="url(#gStaff)" dot={{ fill: "#7c3aed", r: 3, strokeWidth: 0 }} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -284,7 +290,7 @@ const Dashboard = () => {
                   <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} width={24} />
                   <Tooltip content={<ChartTip />} />
                   <Bar dataKey="active" name="Active" fill="#0d9488" radius={[5, 5, 0, 0]} />
-                  <Bar dataKey="idle"   name="Idle"   fill="#e2e8f0" radius={[5, 5, 0, 0]} />
+                  <Bar dataKey="idle" name="Idle" fill="#e2e8f0" radius={[5, 5, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -340,10 +346,10 @@ const Dashboard = () => {
             <Card className="p-4 sm:p-5">
               <p className="text-xs sm:text-sm font-bold text-slate-800 mb-3">Quick Stats</p>
               {[
-                { label: "Total Projects",     val: counts.totalProjects,     cls: "text-teal-600",   bg: "bg-teal-50"   },
-                { label: "Upcoming Deadlines", val: counts.upcomingDeadlines, cls: "text-amber-500",  bg: "bg-amber-50"  },
-                { label: "Staff Members",      val: counts.staff,             cls: "text-violet-600", bg: "bg-violet-50" },
-                { label: "Marketing",          val: counts.marketing,         cls: "text-pink-600",   bg: "bg-pink-50"   },
+                { label: "Total Projects", val: counts.totalProjects, cls: "text-teal-600", bg: "bg-teal-50" },
+                { label: "Upcoming Deadlines", val: counts.upcomingDeadlines, cls: "text-amber-500", bg: "bg-amber-50" },
+                { label: "Staff Members", val: counts.staff, cls: "text-violet-600", bg: "bg-violet-50" },
+                { label: "Marketing", val: counts.marketing, cls: "text-pink-600", bg: "bg-pink-50" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between py-2.5 border-b border-slate-50 last:border-0 gap-2">
                   <span className="text-xs text-slate-500">{item.label}</span>
