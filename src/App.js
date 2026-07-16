@@ -32,6 +32,8 @@ import EditClient from './components/clients/EditClient';
 import AllClients from './components/clients/AllClients';
 import SingleClient from './components/clients/SingleClient';
 import AddInstallment from './components/Installments/AddInstallments';
+import AddEmployeeAccess from './components/views/EmployeeAccess/AddEmployeeAccess';
+import EmployeeAccessList from './components/views/EmployeeAccess/AccessEmployee';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
@@ -94,6 +96,9 @@ function App() {
 
         <Route path="create-payslip" element={<CreatePayslip />} />
         <Route path="payslips" element={<ShowPayslips />} />
+
+        <Route path="add-employee-access" element={<AddEmployeeAccess />} />
+        <Route path="employee-access" element={<EmployeeAccessList />} />
         
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>

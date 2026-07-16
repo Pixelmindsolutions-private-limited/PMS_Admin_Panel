@@ -144,6 +144,58 @@ const Staff = () => {
     }
   };
 
+  // Export function
+  const handleExport = () => {
+    if (filtered.length === 0) {
+      alert("No data to export");
+      return;
+    }
+
+    // Prepare data for export
+    const exportData = filtered.map((staff) => ({
+      "Employee ID": staff.employeeId || "",
+      "Employee Name": staff.employeeName || "",
+      "Email": staff.email || "",
+      "Mobile": staff.mobile || "",
+      "Role": staff.role || "",
+      "Status": staff.isActive ? "Active" : "Inactive",
+      "Joining Date": staff.joiningDate
+        ? new Date(staff.joiningDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+        : "",
+    }));
+
+    // Convert to CSV
+    const headers = Object.keys(exportData[0]);
+    const csvRows = [];
+    
+    // Add headers
+    csvRows.push(headers.join(","));
+    
+    // Add data rows
+    for (const row of exportData) {
+      const values = headers.map(header => {
+        const value = row[header] || "";
+        // Escape commas and quotes
+        return `"${String(value).replace(/"/g, '""')}"`;
+      });
+      csvRows.push(values.join(","));
+    }
+
+    const csvString = csvRows.join("\n");
+    
+    // Create blob and download
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `staff_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-teal-50/80">
       <style>{`
@@ -235,11 +287,20 @@ const Staff = () => {
               </p>
             </div>
           </div>
-          <Link to="/add-staff"
-            className="group flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm w-full sm:w-auto">
-            <MdAdd size={18} className="group-hover:rotate-90 transition-transform duration-300" />
-            Add Employee
-          </Link>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={handleExport}
+              className="group flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm w-full sm:w-auto"
+            >
+              <FaFileAlt size={16} className="group-hover:scale-110 transition-transform duration-300" />
+              Export
+            </button>
+            <Link to="/add-staff"
+              className="group flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm w-full sm:w-auto">
+              <MdAdd size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+              Add Employee
+            </Link>
+          </div>
         </div>
 
         {/* STAT CARDS */}
@@ -438,7 +499,7 @@ const Staff = () => {
                             <MdRemoveRedEye size={15} />
                           </button>
                           <button
-                            onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}  // ✅ Use employeeId
+                            onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}
                             className="btn-act bg-blue-50 hover:bg-blue-100 text-blue-600"
                             title="Edit"
                           >
@@ -539,7 +600,7 @@ const Staff = () => {
                       <MdRemoveRedEye size={14} />
                     </button>
                     <button
-                      onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}  // ✅ Use employeeId
+                      onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}
                       className="btn-act flex-1 w-auto h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
                     >
                       <MdEdit size={14} />
