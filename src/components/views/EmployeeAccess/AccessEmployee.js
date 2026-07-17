@@ -43,8 +43,12 @@ const EmployeeAccessList = () => {
 
       const json = await response.json();
       if (json.success && Array.isArray(json.data)) {
-        setEmployees(json.data);
-        setFilteredEmployees(json.data);
+        const adminEmployees = json.data.filter(
+          (staff) => staff.isAdminPanelAccess === true
+        );
+
+        setEmployees(adminEmployees);
+        setFilteredEmployees(adminEmployees);
       } else {
         throw new Error(json.message || "Invalid response format");
       }
@@ -66,7 +70,7 @@ const EmployeeAccessList = () => {
       setFilteredEmployees(employees);
     } else {
       const term = searchTerm.toLowerCase().trim();
-      const filtered = employees.filter(emp => 
+      const filtered = employees.filter(emp =>
         emp.employeeName?.toLowerCase().includes(term) ||
         emp.employeeId?.toLowerCase().includes(term) ||
         emp.email?.toLowerCase().includes(term) ||
@@ -261,7 +265,7 @@ const EmployeeAccessList = () => {
             {filteredEmployees.map((employee) => {
               const moduleCount = getEnabledModulesCount(employee.modulePermissions);
               const hasAccess = employee.isAdminPanelAccess || false;
-              
+
               return (
                 <div
                   key={employee._id}
