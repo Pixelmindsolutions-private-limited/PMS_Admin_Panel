@@ -34,6 +34,7 @@ import SingleClient from './components/clients/SingleClient';
 import AddInstallment from './components/Installments/AddInstallments';
 import AddEmployeeAccess from './components/views/EmployeeAccess/AddEmployeeAccess';
 import EmployeeAccessList from './components/views/EmployeeAccess/AccessEmployee';
+import SingleEmployeeAccess from './components/views/EmployeeAccess/SingleEmployeeAccess';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
@@ -99,7 +100,8 @@ function App() {
 
         <Route path="add-employee-access" element={<AddEmployeeAccess />} />
         <Route path="employee-access" element={<EmployeeAccessList />} />
-        
+        <Route path="/employee-access/:staffId" element={<SingleEmployeeAccess />} />
+
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>
     </Routes>
