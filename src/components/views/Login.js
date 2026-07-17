@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MdEmail, MdArrowBack } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,6 +12,19 @@ const Login = ({ onLogin }) => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpError, setOtpError] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+
+  // Load saved email from localStorage on component mount
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      setFormData(prev => ({
+        ...prev,
+        email: savedEmail,
+        rememberMe: true
+      }));
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -72,12 +85,22 @@ const Login = ({ onLogin }) => {
       const data = await response.json();
 
       if (!response.ok) throw new Error(data.message || 'Invalid OTP. Please try again.');
+      
+      // Save to sessionStorage
       sessionStorage.setItem('adminDetails', JSON.stringify({
         email: data.data.email,
         adminId: data.data.id || null,
         adminName: data.data.name || null,
         token: data.data.token || null,
       }));
+
+      // Save email to localStorage if remember me is checked
+      if (formData.rememberMe) {
+        localStorage.setItem('rememberedEmail', formData.email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
+
       console.log("Login Successful:", data);
       onLogin();
       navigate('/dashboard');
@@ -89,7 +112,7 @@ const Login = ({ onLogin }) => {
   };
 
   const handleResendOtp = async () => {
-    setOtpLoading(true);
+    setResendLoading(true);
     setOtpError('');
     try {
       const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/auth/send-otp', {
@@ -104,7 +127,7 @@ const Login = ({ onLogin }) => {
     } catch (err) {
       setOtpError(err.message || 'Something went wrong. Please try again.');
     } finally {
-      setOtpLoading(false);
+      setResendLoading(false);
     }
   };
 
@@ -295,7 +318,7 @@ const Login = ({ onLogin }) => {
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
                       autoFocus={index === 0}
-                      disabled={otpLoading}
+                      disabled={otpLoading || resendLoading}
                       className="flex-1 min-w-0 aspect-square text-center text-white font-bold bg-white/5 border border-white/15 rounded-xl outline-none transition-all duration-300 focus:border-[#00e5cc]/70 focus:bg-white/10 focus:shadow-[0_0_0_3px_rgba(0,229,204,0.12)] disabled:opacity-60"
                       style={{ fontSize: 'clamp(1rem, 4vw, 1.5rem)' }}
                     />
@@ -305,7 +328,7 @@ const Login = ({ onLogin }) => {
                 <div className="space-y-2.5 sm:space-y-3">
                   <button
                     type="submit"
-                    disabled={otpLoading || otp.join('').length !== 6}
+                    disabled={otpLoading || resendLoading || otp.join('').length !== 6}
                     className="w-full py-3 text-white text-sm font-bold tracking-wide rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: 'linear-gradient(to right, #00b3b3, #008b8b)', boxShadow: '0 8px 20px rgba(0,139,139,0.35)' }}
                   >
@@ -322,10 +345,18 @@ const Login = ({ onLogin }) => {
                   <button
                     type="button"
                     onClick={handleResendOtp}
-                    disabled={otpLoading}
+                    disabled={otpLoading || resendLoading}
                     className="w-full py-3 text-sm font-medium text-[#00e5cc] bg-white/5 border border-[#00e5cc]/30 rounded-xl hover:bg-[#00e5cc]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {otpLoading ? 'Sending...' : 'Resend OTP'}
+                    {resendLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                          <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3" />
+                          <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                        </svg>
+                        Sending...
+                      </span>
+                    ) : 'Resend OTP'}
                   </button>
                 </div>
               </form>
