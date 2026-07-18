@@ -7,6 +7,11 @@ import {
   MdPerson,
   MdSearch,
   MdVisibility,
+  MdEmail,
+  MdPhone,
+  MdWork,
+  MdLock,
+  MdLockOpen,
 } from 'react-icons/md';
 import { FaUsersCog } from 'react-icons/fa';
 
@@ -25,7 +30,7 @@ const EmployeeAccessList = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Fetch all employees
+  // Fetch all employees with admin panel access
   const fetchEmployees = async () => {
     setLoading(true);
     setError(null);
@@ -42,11 +47,13 @@ const EmployeeAccessList = () => {
       }
 
       const json = await response.json();
+      console.log("All employees response:", json);
+      
       if (json.success && Array.isArray(json.data)) {
+        // Filter employees who have admin panel access
         const adminEmployees = json.data.filter(
           (staff) => staff.isAdminPanelAccess === true
         );
-
         setEmployees(adminEmployees);
         setFilteredEmployees(adminEmployees);
       } else {
@@ -95,20 +102,36 @@ const EmployeeAccessList = () => {
     navigate('/dashboard');
   };
 
-  // Get enabled modules count
-  const getEnabledModulesCount = (modules) => {
-    return Object.values(modules || {}).filter(Boolean).length;
+  // Get enabled modules count from modulePermissions array
+  const getEnabledModulesCount = (modulePermissions) => {
+    if (!modulePermissions || !Array.isArray(modulePermissions)) return 0;
+    // Count modules that have at least one permission
+    return modulePermissions.filter(module => 
+      module.items && module.items.some(item => item.permission && item.permission.length > 0)
+    ).length;
+  };
+
+  // Get total permissions count
+  const getTotalPermissionsCount = (modulePermissions) => {
+    if (!modulePermissions || !Array.isArray(modulePermissions)) return 0;
+    let count = 0;
+    modulePermissions.forEach(module => {
+      if (module.items) {
+        module.items.forEach(item => {
+          if (item.permission) {
+            count += item.permission.length;
+          }
+        });
+      }
+    });
+    return count;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50/80 flex items-center justify-center">
-        <style>{`
-          @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-          .spinner { width:40px; height:40px; border:3px solid #e0f2f1; border-top:3px solid #3b82f6; border-radius:50%; animation:spin 0.8s linear infinite; }
-        `}</style>
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-teal-50/80 flex items-center justify-center">
         <div className="text-center">
-          <div className="spinner mx-auto mb-4" />
+          <div className="w-12 h-12 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-500 font-medium">Loading employees...</p>
         </div>
       </div>
@@ -117,17 +140,8 @@ const EmployeeAccessList = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50/80 flex items-center justify-center p-4">
-        <style>{`
-          .premium-card {
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(59,130,246,0.18);
-            box-shadow: 0 4px 24px -4px rgba(59,130,246,0.10), 0 1px 4px rgba(0,0,0,0.04);
-          }
-        `}</style>
-        <div className="premium-card rounded-2xl p-8 max-w-md w-full text-center">
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-teal-50/80 flex items-center justify-center p-4">
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-8 max-w-md w-full text-center border border-teal-100/50 shadow-xl shadow-teal-500/5">
           <div className="w-16 h-16 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-4">
             <MdRefresh className="text-red-400" size={32} />
           </div>
@@ -142,7 +156,7 @@ const EmployeeAccessList = () => {
             </button>
             <button
               onClick={handleRetry}
-              className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-colors text-sm"
+              className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold hover:shadow-lg transition-all text-sm"
             >
               Retry
             </button>
@@ -153,52 +167,11 @@ const EmployeeAccessList = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50/80 py-4 sm:py-6 lg:py-8">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        * { font-family: 'Inter', -apple-system, sans-serif; box-sizing: border-box; }
-
-        .premium-card {
-          background: rgba(255,255,255,0.92);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(59,130,246,0.18);
-          box-shadow: 0 4px 24px -4px rgba(59,130,246,0.10), 0 1px 4px rgba(0,0,0,0.04);
-        }
-        .status-pill {
-          display: inline-flex; align-items: center; gap: 4px;
-          padding: 3px 9px; border-radius: 100px;
-          font-size: 10px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase;
-          white-space: nowrap;
-        }
-        .employee-card {
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .employee-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px -8px rgba(59,130,246,0.15);
-        }
-        .search-input {
-          background: rgba(255,255,255,0.9);
-          backdrop-filter: blur(8px);
-          -webkit-backdrop-filter: blur(8px);
-          border: 1px solid rgba(59,130,246,0.15);
-          transition: all 0.2s ease;
-        }
-        .search-input:focus {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
-          outline: none;
-        }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        .fade-up { animation:fadeUp 0.3s ease forwards; }
-      `}</style>
-
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-teal-50/80 py-4 sm:py-6 lg:py-8">
       {/* SUCCESS TOAST */}
       {showSuccess && (
-        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg fade-up flex items-center gap-2">
-          <MdCheckCircle size={20} />
+        <div className="fixed top-4 right-4 z-50 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-6 py-3 rounded-xl shadow-lg animate-fade-in-up flex items-center gap-2">
+          <MdCheckCircle size={20} className="animate-pulse" />
           {successMessage}
         </div>
       )}
@@ -210,21 +183,21 @@ const EmployeeAccessList = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={handleGoBack}
-              className="p-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition-all"
+              className="p-2 rounded-xl bg-white hover:bg-gray-50 text-gray-600 transition-all shadow-sm border border-gray-200"
               title="Back to Dashboard"
             >
               <MdArrowBack size={20} />
             </button>
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/30 shrink-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-teal-600 to-teal-500 flex items-center justify-center shadow-lg shadow-teal-500/30 shrink-0">
               <FaUsersCog className="text-white" size={18} />
             </div>
             <div>
-              <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold text-gray-800 tracking-tight leading-tight">
+              <h1 className="text-lg sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-teal-600 to-teal-700 bg-clip-text text-transparent tracking-tight leading-tight">
                 Employee Access Management
               </h1>
               <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full inline-block" />
-                {filteredEmployees.length} employees found
+                <span className="w-1.5 h-1.5 bg-teal-500 rounded-full inline-block" />
+                {filteredEmployees.length} employees with access
               </p>
             </div>
           </div>
@@ -238,7 +211,7 @@ const EmployeeAccessList = () => {
         </div>
 
         {/* SEARCH */}
-        <div className="premium-card rounded-2xl p-4 sm:p-6 mb-5 sm:mb-6">
+        <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 mb-5 sm:mb-6 border border-teal-100/50 shadow-xl shadow-teal-500/5">
           <div className="relative">
             <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
@@ -246,14 +219,14 @@ const EmployeeAccessList = () => {
               placeholder="Search by name, ID, email or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input w-full pl-10 pr-4 py-3 rounded-xl text-sm text-gray-700 placeholder-gray-400"
+              className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 text-sm text-gray-700 bg-white outline-none"
             />
           </div>
         </div>
 
         {/* EMPLOYEE LIST */}
         {filteredEmployees.length === 0 ? (
-          <div className="premium-card rounded-2xl p-12 text-center">
+          <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-12 text-center border border-teal-100/50 shadow-xl shadow-teal-500/5">
             <div className="text-gray-400">
               <MdPerson size={48} className="mx-auto mb-3 opacity-50" />
               <p className="text-lg font-medium text-gray-600">No employees found</p>
@@ -264,23 +237,24 @@ const EmployeeAccessList = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-5">
             {filteredEmployees.map((employee) => {
               const moduleCount = getEnabledModulesCount(employee.modulePermissions);
+              const totalPermissions = getTotalPermissionsCount(employee.modulePermissions);
               const hasAccess = employee.isAdminPanelAccess || false;
 
               return (
                 <div
                   key={employee._id}
                   onClick={() => handleEmployeeClick(employee)}
-                  className="employee-card premium-card rounded-2xl p-4 sm:p-5 hover:border-blue-300"
+                  className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-200 hover:transform hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/10 border border-teal-100/50"
                 >
                   <div className="flex items-start gap-3">
                     {employee.profileImage ? (
                       <img
                         src={employee.profileImage}
                         alt={employee.employeeName}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-blue-100 shrink-0"
+                        className="w-12 h-12 rounded-full object-cover border-2 border-teal-100 shrink-0"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center border-2 border-blue-50 shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center border-2 border-teal-50 shrink-0">
                         <span className="text-white font-bold text-lg">
                           {employee.employeeName?.charAt(0).toUpperCase() || "?"}
                         </span>
@@ -291,18 +265,27 @@ const EmployeeAccessList = () => {
                         {employee.employeeName}
                       </h3>
                       <p className="text-xs text-gray-500">{employee.employeeId}</p>
-                      <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className={`status-pill ${employee.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          employee.isActive 
+                            ? "bg-green-100 text-green-700" 
+                            : "bg-gray-100 text-gray-500"
+                        }`}>
                           {employee.isActive ? "Active" : "Inactive"}
                         </span>
                         {hasAccess && (
-                          <span className="status-pill bg-blue-100 text-blue-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-100 text-teal-700">
                             Access
                           </span>
                         )}
                         {moduleCount > 0 && (
-                          <span className="status-pill bg-purple-100 text-purple-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700">
                             {moduleCount} Modules
+                          </span>
+                        )}
+                        {totalPermissions > 0 && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">
+                            {totalPermissions} Permissions
                           </span>
                         )}
                       </div>
@@ -315,6 +298,17 @@ const EmployeeAccessList = () => {
           </div>
         )}
       </div>
+
+      {/* Custom Animations */}
+      <style>{`
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.3s ease forwards;
+        }
+      `}</style>
     </div>
   );
 };

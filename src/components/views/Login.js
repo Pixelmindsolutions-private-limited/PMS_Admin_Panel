@@ -87,7 +87,7 @@ const Login = ({ onLogin }) => {
       if (!response.ok) throw new Error(data.message || 'Invalid OTP. Please try again.');
       
       // Save to sessionStorage
-      sessionStorage.setItem('adminDetails', JSON.stringify({
+      sessionStorage.setItem('loginDetails', JSON.stringify({
         email: data.data.email,
         adminId: data.data.id || null,
         adminName: data.data.name || null,
@@ -253,12 +253,16 @@ const Login = ({ onLogin }) => {
               ) : 'Send OTP'}
             </button>
 
-            {/* Support */}
+            {/* Staff Login Link */}
             <p className="text-center text-xs mt-1 text-white/40">
-              Don't have an account?{' '}
-              <a href="#" className="text-white font-semibold hover:text-[#00e5cc]/80 hover:underline transition-all duration-200">
-                Contact support
-              </a>
+              Are you staff?{' '}
+              <button
+                type="button"
+                onClick={() => navigate('/staff-login')}
+                className="text-[#00e5cc] font-semibold hover:text-[#00e5cc]/80 hover:underline transition-all duration-200"
+              >
+                Staff Login
+              </button>
             </p>
           </form>
         </div>
