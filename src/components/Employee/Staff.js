@@ -26,8 +26,15 @@ import { useLocation } from "react-router-dom";
 
 const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff" || "https://pmsbackend.pixelmindsolutions.com/api/staff";
 
-const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
-const AUTH_TOKEN = adminDetails?.token;
+const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
+
+const AUTH_TOKEN = loginDetails?.token;
+
+const permission = loginDetails?.modulePermissions?.find(
+  (item) => item.component === "staffManagement"
+);
+
+const access = permission?.items?.[0]?.permission || [];
 
 const Staff = () => {
   const navigate = useNavigate();
@@ -167,10 +174,10 @@ const Staff = () => {
     // Convert to CSV
     const headers = Object.keys(exportData[0]);
     const csvRows = [];
-    
+
     // Add headers
     csvRows.push(headers.join(","));
-    
+
     // Add data rows
     for (const row of exportData) {
       const values = headers.map(header => {
@@ -182,12 +189,12 @@ const Staff = () => {
     }
 
     const csvString = csvRows.join("\n");
-    
+
     // Create blob and download
     const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute("href", url);
     link.setAttribute("download", `staff_export_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
@@ -288,18 +295,31 @@ const Staff = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              onClick={handleExport}
-              className="group flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm w-full sm:w-auto"
-            >
-              <FaFileAlt size={16} className="group-hover:scale-110 transition-transform duration-300" />
-              Export
-            </button>
-            <Link to="/add-staff"
-              className="group flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm w-full sm:w-auto">
-              <MdAdd size={18} className="group-hover:rotate-90 transition-transform duration-300" />
-              Add Employee
-            </Link>
+            {(loginDetails?.role === "Admin" || access.includes("export")) && (
+              <button
+                onClick={handleExport}
+                className="group flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm w-full sm:w-auto"
+              >
+                <FaFileAlt
+                  size={16}
+                  className="group-hover:scale-110 transition-transform duration-300"
+                />
+                Export
+              </button>
+            )}
+
+            {(loginDetails?.role === "Admin" || access.includes("add")) && (
+              <Link
+                to="/add-staff"
+                className="group flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm w-full sm:w-auto"
+              >
+                <MdAdd
+                  size={18}
+                  className="group-hover:rotate-90 transition-transform duration-300"
+                />
+                Add Employee
+              </Link>
+            )}
           </div>
         </div>
 
@@ -494,21 +514,27 @@ const Staff = () => {
                       </td>
                       <td className="py-3 px-3 sm:px-4">
                         <div className="flex items-center gap-1">
-                          <button onClick={() => navigate(`/staff/${staff.employeeId}`)}
-                            className="btn-act bg-teal-50 hover:bg-teal-100 text-teal-600" title="View">
-                            <MdRemoveRedEye size={15} />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}
-                            className="btn-act bg-blue-50 hover:bg-blue-100 text-blue-600"
-                            title="Edit"
-                          >
-                            <MdEdit size={15} />
-                          </button>
-                          <button onClick={() => setDeleteConfirm({ id: staff.employeeId, name: staff.employeeName })}
-                            className="btn-act bg-red-50 hover:bg-red-100 text-red-500" title="Delete">
-                            <MdDelete size={15} />
-                          </button>
+                          {(loginDetails?.role === "Admin" || access.includes("view")) && (
+                            <button onClick={() => navigate(`/staff/${staff.employeeId}`)}
+                              className="btn-act bg-teal-50 hover:bg-teal-100 text-teal-600" title="View">
+                              <MdRemoveRedEye size={15} />
+                            </button>
+                          )}
+                          {(loginDetails?.role === "Admin" || access.includes("edit")) && (
+                            <button
+                              onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}
+                              className="btn-act bg-blue-50 hover:bg-blue-100 text-blue-600"
+                              title="Edit"
+                            >
+                              <MdEdit size={15} />
+                            </button>
+                          )}
+                          {(loginDetails?.role === "Admin" || access.includes("delete")) && (
+                            <button onClick={() => setDeleteConfirm({ id: staff.employeeId, name: staff.employeeName })}
+                              className="btn-act bg-red-50 hover:bg-red-100 text-red-500" title="Delete">
+                              <MdDelete size={15} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -595,20 +621,26 @@ const Staff = () => {
                   </div>
 
                   <div className="flex gap-1.5 mt-3">
-                    <button onClick={() => navigate(`/staff/${staff.employeeId}`)}
-                      className="btn-act flex-1 w-auto h-8 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-600">
-                      <MdRemoveRedEye size={14} />
-                    </button>
+                    {(loginDetails?.role === "Admin" || access.includes("view")) && (
+                      <button onClick={() => navigate(`/staff/${staff.employeeId}`)}
+                        className="btn-act flex-1 w-auto h-8 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-600">
+                        <MdRemoveRedEye size={14} />
+                      </button>
+                    )}
+                    {(loginDetails?.role === "Admin" || access.includes("edit")) && (
                     <button
                       onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}
                       className="btn-act flex-1 w-auto h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
                     >
                       <MdEdit size={14} />
                     </button>
+                    )}
+                    {(loginDetails?.role === "Admin" || access.includes("delete")) && (
                     <button onClick={() => setDeleteConfirm({ id: staff.employeeId, name: staff.employeeName })}
                       className="btn-act flex-1 w-auto h-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">
                       <MdDelete size={14} />
                     </button>
+                    )}
                   </div>
                 </div>
               )) : (

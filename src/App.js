@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 import Login from './components/views/Login';
+import StaffLogin from './components/views/StaffLogin';
 import DashboardLayout from './components/views/DashboardLayout';
 import Dashboard from './components/views/Dashboard';
 import Staff from './components/Employee/Staff';
@@ -38,7 +39,7 @@ import SingleEmployeeAccess from './components/views/EmployeeAccess/SingleEmploy
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
-    !!sessionStorage.getItem("adminDetails")
+    !!sessionStorage.getItem("loginDetails")
   );
 
   const handleLogin = () => {
@@ -46,7 +47,7 @@ function App() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('adminDetails');
+    sessionStorage.removeItem('loginDetails');
     setIsLoggedIn(false);
   };
 
@@ -56,6 +57,8 @@ function App() {
         path="/"
         element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
       />
+
+      <Route path='/staff-login' element={<StaffLogin onLogin={handleLogin} />}/>
 
       <Route
         path="/"

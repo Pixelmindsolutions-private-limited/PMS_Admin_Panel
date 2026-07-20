@@ -6,8 +6,16 @@ import * as XLSX from 'xlsx';
 
 const API_URL = 'https://pmsbackend.pixelmindsolutions.com/api/clients/all';
 const DELETE_URL = 'https://pmsbackend.pixelmindsolutions.com/api/clients';
-const adminDetails = JSON.parse(sessionStorage.getItem('adminDetails'));
-const AUTH_TOKEN = adminDetails?.token;
+
+const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
+
+const AUTH_TOKEN = loginDetails?.token;
+
+const permission = loginDetails?.modulePermissions?.find(
+  (item) => item.component === "staffManagement"
+);
+
+const access = permission?.items?.[0]?.permission || [];
 
 const headers = () => ({
   Authorization: `Bearer ${AUTH_TOKEN}`,
@@ -35,7 +43,7 @@ const AllClients = () => {
         headers: headers()
       });
       const data = await response.json();
-      
+
       if (data.success) {
         setClients(Array.isArray(data.data) ? data.data : []);
       } else {
@@ -67,7 +75,7 @@ const AllClients = () => {
         headers: headers(),
       });
       const data = await response.json();
-      
+
       if (data.success) {
         setClients(prev => prev.filter(c => c._id !== id));
         showToast('success', 'Client deleted successfully');
@@ -85,10 +93,10 @@ const AllClients = () => {
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
     return clients.filter(c => {
-      const match = c.name?.toLowerCase().includes(s) || 
-                    c.mobile?.toLowerCase().includes(s) ||
-                    c.email?.toLowerCase().includes(s) ||
-                    c.lead?.toLowerCase().includes(s);
+      const match = c.name?.toLowerCase().includes(s) ||
+        c.mobile?.toLowerCase().includes(s) ||
+        c.email?.toLowerCase().includes(s) ||
+        c.lead?.toLowerCase().includes(s);
       return match;
     });
   }, [search, clients]);
@@ -97,7 +105,7 @@ const AllClients = () => {
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginated = filtered.slice(startIndex, startIndex + itemsPerPage);
-  
+
   useEffect(() => {
     setCurrentPage(1);
   }, [search, itemsPerPage]);
@@ -142,8 +150,7 @@ const AllClients = () => {
 
       {/* Toast */}
       {toastMsg && (
-        <div className={`toast-in fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm max-w-sm ${
-          toastMsg.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+        <div className={`toast-in fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm max-w-sm ${toastMsg.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
           <span>{toastMsg.type === 'success' ? '✓' : '!'}</span>
           <span className="flex-1 text-sm">{toastMsg.message}</span>
           <button onClick={() => setToastMsg(null)} className="opacity-80 hover:opacity-100 ml-1">✕</button>
@@ -186,14 +193,18 @@ const AllClients = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button onClick={exportToExcel}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold text-sm transition-all shadow-sm">
-              <MdDownload size={16} /> Export
-            </button>
-            <Link to="/add-client"
-              className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm">
-              <MdAdd size={18} /> Add Client
-            </Link>
+            {(loginDetails?.role === "Admin" || access.includes("export")) && (
+              <button onClick={exportToExcel}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold text-sm transition-all shadow-sm">
+                <MdDownload size={16} /> Export
+              </button>
+            )}
+            {(loginDetails?.role === "Admin" || access.includes("add")) && (
+              <Link to="/add-client"
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm">
+                <MdAdd size={18} /> Add Client
+              </Link>
+            )}
           </div>
         </div>
 
@@ -208,11 +219,10 @@ const AllClients = () => {
             <div key={i} className="stat-card rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-2xl">{s.icon}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                  s.color === 'teal' ? 'bg-teal-100 text-teal-700' :
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.color === 'teal' ? 'bg-teal-100 text-teal-700' :
                   s.color === 'blue' ? 'bg-blue-100 text-blue-700' :
-                  s.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' :
-                  'bg-purple-100 text-purple-700'}`}>{s.label}</span>
+                    s.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' :
+                      'bg-purple-100 text-purple-700'}`}>{s.label}</span>
               </div>
               <p className="text-3xl font-bold text-gray-800">{s.value}</p>
             </div>
@@ -284,23 +294,29 @@ const AllClients = () => {
                           {client.name?.charAt(0).toUpperCase() || '?'}
                         </div>
                         <div className="flex gap-1">
-                          <button onClick={() => navigate(`/client/${client._id}`)}
-                            className="p-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-600 transition-all" title="View">
-                            <MdVisibility size={16} />
-                          </button>
-                          <button onClick={() => navigate(`/edit-client/${client._id}`)}
-                            className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-all" title="Edit">
-                            <MdEdit size={16} />
-                          </button>
-                          <button onClick={() => setDeleteId(client._id)}
-                            className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-all" title="Delete">
-                            <MdDelete size={16} />
-                          </button>
+                          {(loginDetails?.role === "Admin" || access.includes("view")) && (
+                            <button onClick={() => navigate(`/client/${client._id}`)}
+                              className="p-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-600 transition-all" title="View">
+                              <MdVisibility size={16} />
+                            </button>
+                          )}
+                          {(loginDetails?.role === "Admin" || access.includes("edit")) && (
+                            <button onClick={() => navigate(`/edit-client/${client._id}`)}
+                              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-all" title="Edit">
+                              <MdEdit size={16} />
+                            </button>
+                          )}
+                          {(loginDetails?.role === "Admin" || access.includes("delete")) && (
+                            <button onClick={() => setDeleteId(client._id)}
+                              className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-all" title="Delete">
+                              <MdDelete size={16} />
+                            </button>
+                          )}
                         </div>
                       </div>
 
                       <h3 className="font-bold text-gray-800 text-base truncate">{client.name}</h3>
-                      
+
                       <div className="mt-3 space-y-1.5">
                         {client.mobile && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -355,8 +371,7 @@ const AllClients = () => {
                   </p>
                   <div className="flex items-center gap-1 flex-wrap">
                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}
-                      className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs border transition-all ${
-                        currentPage === 1 ? 'text-gray-300 border-gray-100 bg-gray-50 cursor-not-allowed'
+                      className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs border transition-all ${currentPage === 1 ? 'text-gray-300 border-gray-100 bg-gray-50 cursor-not-allowed'
                         : 'text-teal-700 border-teal-200 hover:bg-teal-50 bg-white'}`}>
                       ← Prev
                     </button>
@@ -365,8 +380,7 @@ const AllClients = () => {
                       if (pg === 1 || pg === totalPages || (pg >= currentPage - 1 && pg <= currentPage + 1))
                         return (
                           <button key={pg} onClick={() => setCurrentPage(pg)}
-                            className={`w-8 h-8 rounded-lg font-bold text-xs transition-all ${
-                              currentPage === pg ? 'bg-teal-600 text-white shadow-md' : 'hover:bg-teal-50 text-gray-600 bg-white border border-gray-100'}`}>
+                            className={`w-8 h-8 rounded-lg font-bold text-xs transition-all ${currentPage === pg ? 'bg-teal-600 text-white shadow-md' : 'hover:bg-teal-50 text-gray-600 bg-white border border-gray-100'}`}>
                             {pg}
                           </button>
                         );
@@ -375,8 +389,7 @@ const AllClients = () => {
                       return null;
                     })}
                     <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}
-                      className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs border transition-all ${
-                        currentPage === totalPages ? 'text-gray-300 border-gray-100 bg-gray-50 cursor-not-allowed'
+                      className={`px-2.5 py-1.5 rounded-lg font-semibold text-xs border transition-all ${currentPage === totalPages ? 'text-gray-300 border-gray-100 bg-gray-50 cursor-not-allowed'
                         : 'text-teal-700 border-teal-200 hover:bg-teal-50 bg-white'}`}>
                       Next →
                     </button>

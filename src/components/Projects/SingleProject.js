@@ -159,7 +159,7 @@ const ProjectDetails = () => {
             className="flex items-center gap-2 text-gray-600 hover:text-teal-700 font-medium text-sm transition-colors self-start">
             <MdArrowBack size={18} /> Back to Projects
           </button>
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* <div className="flex items-center gap-2 flex-wrap">
             <button onClick={exportExcel}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-xs sm:text-sm transition-all shadow-sm">
               <MdDownload size={16} /> Export
@@ -172,7 +172,7 @@ const ProjectDetails = () => {
               className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700 font-semibold text-xs sm:text-sm transition-all shadow-md">
               <MdEdit size={16} /> Edit Project
             </Link>
-          </div>
+          </div> */}
         </div>
 
         {/* Hero Banner */}

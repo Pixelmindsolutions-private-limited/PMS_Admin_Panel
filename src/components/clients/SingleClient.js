@@ -115,7 +115,7 @@ const SingleClient = () => {
             className="flex items-center gap-2 text-gray-600 hover:text-teal-700 font-medium text-sm transition-colors self-start">
             <MdArrowBack size={18} /> Back to Clients
           </button>
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* <div className="flex items-center gap-2 flex-wrap">
             <button onClick={exportToExcel}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-sm transition-all shadow-sm">
               <MdDownload size={16} /> Export
@@ -128,7 +128,7 @@ const SingleClient = () => {
               className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700 font-semibold text-sm transition-all shadow-md">
               <MdEdit size={16} /> Edit Client
             </Link>
-          </div>
+          </div> */}
         </div>
 
         {/* Hero Banner */}
@@ -210,7 +210,7 @@ const SingleClient = () => {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-6">
+          {/* <div className="space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-100">
                 <FaUsers className="inline mr-2 text-teal-600" /> Quick Actions
@@ -230,7 +230,7 @@ const SingleClient = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

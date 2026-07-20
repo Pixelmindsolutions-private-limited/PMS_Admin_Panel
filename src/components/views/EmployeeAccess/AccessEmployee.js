@@ -12,6 +12,10 @@ import {
   MdWork,
   MdLock,
   MdLockOpen,
+  MdDelete,
+  MdDeleteSweep,
+  MdClose,
+  MdWarning
 } from 'react-icons/md';
 import { FaUsersCog } from 'react-icons/fa';
 
@@ -29,6 +33,12 @@ const EmployeeAccessList = () => {
   const [error, setError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  
+  // Delete state
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   // Fetch all employees with admin panel access
   const fetchEmployees = async () => {
@@ -89,7 +99,78 @@ const EmployeeAccessList = () => {
 
   // Handle employee click - navigate to employee details
   const handleEmployeeClick = (employee) => {
+    // Don't navigate if in selection mode
+    if (selectedEmployees.length > 0) return;
     navigate(`/employee-access/${employee._id}`);
+  };
+
+  // Handle employee selection for deletion
+  const toggleEmployeeSelection = (employeeId, e) => {
+    e.stopPropagation();
+    setSelectedEmployees(prev => {
+      if (prev.includes(employeeId)) {
+        return prev.filter(id => id !== employeeId);
+      } else {
+        return [...prev, employeeId];
+      }
+    });
+  };
+
+  // Handle select all
+  const toggleSelectAll = () => {
+    if (selectedEmployees.length === filteredEmployees.length) {
+      setSelectedEmployees([]);
+    } else {
+      setSelectedEmployees(filteredEmployees.map(emp => emp._id));
+    }
+  };
+
+  // Handle delete confirmation
+  const handleDelete = async () => {
+    if (selectedEmployees.length === 0) return;
+    
+    setIsDeleting(true);
+    setDeleteError(null);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/delete`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${AUTH_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          staffIds: selectedEmployees
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        // Show success message
+        setSuccessMessage(`Successfully deleted ${selectedEmployees.length} employee(s)`);
+        setShowSuccess(true);
+        
+        // Close modal
+        setShowDeleteModal(false);
+        setSelectedEmployees([]);
+        
+        // Refresh employee list
+        await fetchEmployees();
+        
+        // Auto-hide success message
+        setTimeout(() => {
+          setShowSuccess(false);
+        }, 3000);
+      } else {
+        throw new Error(data.message || "Failed to delete employees");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      setDeleteError(err.message || "Failed to delete employees. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Handle retry
@@ -105,7 +186,6 @@ const EmployeeAccessList = () => {
   // Get enabled modules count from modulePermissions array
   const getEnabledModulesCount = (modulePermissions) => {
     if (!modulePermissions || !Array.isArray(modulePermissions)) return 0;
-    // Count modules that have at least one permission
     return modulePermissions.filter(module => 
       module.items && module.items.some(item => item.permission && item.permission.length > 0)
     ).length;
@@ -176,6 +256,69 @@ const EmployeeAccessList = () => {
         </div>
       )}
 
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <MdWarning className="text-red-500" size={24} />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-800">Delete Employees</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Are you sure you want to delete <strong>{selectedEmployees.length}</strong> employee{selectedEmployees.length > 1 ? 's' : ''}? 
+                  This action cannot be undone.
+                </p>
+                {deleteError && (
+                  <p className="text-sm text-red-500 mt-2 bg-red-50 p-2 rounded-lg">
+                    {deleteError}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteError(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <MdClose size={24} />
+              </button>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteError(null);
+                }}
+                className="flex-1 py-2.5 rounded-xl border-2 border-gray-200 font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <MdDelete size={18} />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="w-full max-w-screen-2xl mx-auto px-3 sm:px-5 md:px-6 lg:px-8 xl:px-10">
 
         {/* HEADER */}
@@ -201,26 +344,47 @@ const EmployeeAccessList = () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={fetchEmployees}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/80 border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors text-sm"
-          >
-            <MdRefresh size={16} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedEmployees.length > 0 && (
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-medium hover:shadow-lg transition-all text-sm"
+              >
+                <MdDeleteSweep size={16} />
+                Delete Selected ({selectedEmployees.length})
+              </button>
+            )}
+            <button
+              onClick={fetchEmployees}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/80 border border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition-colors text-sm"
+            >
+              <MdRefresh size={16} />
+              Refresh
+            </button>
+          </div>
         </div>
 
-        {/* SEARCH */}
+        {/* SEARCH & BULK ACTIONS */}
         <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-6 mb-5 sm:mb-6 border border-teal-100/50 shadow-xl shadow-teal-500/5">
-          <div className="relative">
-            <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search by name, ID, email or phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 text-sm text-gray-700 bg-white outline-none"
-            />
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="relative flex-1 w-full">
+              <MdSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <input
+                type="text"
+                placeholder="Search by name, ID, email or phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all duration-200 text-sm text-gray-700 bg-white outline-none"
+              />
+            </div>
+            {filteredEmployees.length > 0 && (
+              <button
+                onClick={toggleSelectAll}
+                className="px-4 py-2.5 rounded-xl bg-teal-50 text-teal-700 font-medium hover:bg-teal-100 transition-colors text-sm whitespace-nowrap"
+              >
+                {selectedEmployees.length === filteredEmployees.length ? 'Deselect All' : 'Select All'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -239,14 +403,33 @@ const EmployeeAccessList = () => {
               const moduleCount = getEnabledModulesCount(employee.modulePermissions);
               const totalPermissions = getTotalPermissionsCount(employee.modulePermissions);
               const hasAccess = employee.isAdminPanelAccess || false;
+              const isSelected = selectedEmployees.includes(employee._id);
 
               return (
                 <div
                   key={employee._id}
                   onClick={() => handleEmployeeClick(employee)}
-                  className="bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-200 hover:transform hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/10 border border-teal-100/50"
+                  className={`bg-white/80 backdrop-blur-xl rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-200 hover:transform hover:-translate-y-1 hover:shadow-xl hover:shadow-teal-500/10 border ${
+                    isSelected 
+                      ? 'border-teal-500 ring-2 ring-teal-400 shadow-lg shadow-teal-500/20' 
+                      : 'border-teal-100/50'
+                  }`}
                 >
                   <div className="flex items-start gap-3">
+                    {/* Selection Checkbox */}
+                    <div 
+                      onClick={(e) => toggleEmployeeSelection(employee._id, e)}
+                      className="mt-1"
+                    >
+                      <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                        isSelected 
+                          ? 'bg-teal-500 border-teal-500' 
+                          : 'border-gray-300 hover:border-teal-400'
+                      }`}>
+                        {isSelected && <MdCheckCircle className="text-white" size={14} />}
+                      </div>
+                    </div>
+
                     {employee.profileImage ? (
                       <img
                         src={employee.profileImage}
@@ -305,8 +488,15 @@ const EmployeeAccessList = () => {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
         .animate-fade-in-up {
           animation: fade-in-up 0.3s ease forwards;
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease forwards;
         }
       `}</style>
     </div>

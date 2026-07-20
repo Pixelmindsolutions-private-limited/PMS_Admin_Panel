@@ -1,8 +1,6 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { MdMenu, MdAccountCircle, MdLogout, MdClose, MdNotificationsNone, MdSearch } from 'react-icons/md';
-import { useNavigate } from 'react-router';
+import { useNavigate } from "react-router-dom";
 
 const Header = ({ onToggleSidebar, onLogout, isMobile, isTablet, sidebarOpen }) => {
   const [showDropdown, setShowDropdown] = useState(false);
@@ -11,7 +9,6 @@ const Header = ({ onToggleSidebar, onLogout, isMobile, isTablet, sidebarOpen }) 
 
   const staffDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 
-  const navigate = useNavigate();
   // Detect scroll for glass effect
   useEffect(() => {
     const handleScroll = () => {
@@ -21,9 +18,22 @@ const Header = ({ onToggleSidebar, onLogout, isMobile, isTablet, sidebarOpen }) 
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+
+
+  const navigate = useNavigate();
+
   const handleLogout = () => {
-    sessionStorage.removeItem('adminDetails');
+    const adminDetails = JSON.parse(
+      sessionStorage.getItem("loginDetails") || "{}"
+    );
+
+    const role = adminDetails?.role;
+
+    sessionStorage.removeItem("loginDetails");
+
     if (onLogout) onLogout();
+
+    navigate(role === "Staff" ? "/staff-login" : "/");
   };
 
   // Close dropdown when clicking outside
@@ -49,8 +59,8 @@ const Header = ({ onToggleSidebar, onLogout, isMobile, isTablet, sidebarOpen }) 
       }} />
 
       <header className={`sticky top-0 px-2 xs:px-3 sm:px-4 md:px-5 lg:px-6 xl:px-8 py-2 sm:py-2.5 md:py-3 flex justify-between items-center transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] z-40 ${isScrolled
-          ? 'bg-white/85 backdrop-blur-xl border-b border-teal-400/20 shadow-md shadow-teal-900/10'
-          : 'bg-white/95 backdrop-blur-xl border-b border-white/30 shadow-sm'
+        ? 'bg-white/85 backdrop-blur-xl border-b border-teal-400/20 shadow-md shadow-teal-900/10'
+        : 'bg-white/95 backdrop-blur-xl border-b border-white/30 shadow-sm'
         }`}>
         <div className="flex items-center gap-1.5 xs:gap-2 sm:gap-2.5 md:gap-3 min-w-0">
           {/* Premium Menu Toggle Button */}
@@ -66,10 +76,10 @@ const Header = ({ onToggleSidebar, onLogout, isMobile, isTablet, sidebarOpen }) 
           <div className="flex flex-col min-w-0">
             <h2 onClick={() => navigate('/dashboard')} className={`mb-0 font-bold bg-gradient-to-r from-teal-700 to-teal-800 bg-clip-text text-transparent tracking-tight truncate ${isMobile ? 'text-base xs:text-lg' : 'text-xl sm:text-2xl'
               }`}>
-              {isMobile ? 'Dashboard' : 'PixelmindSolutions'}
+              {staffDetails.role} Portal
             </h2>
             <span className="hidden md:block text-gray-500 text-[10px] sm:text-[11px] tracking-wider -mt-0.5">
-              ADMIN PORTAL
+              {isMobile ? 'Dashboard' : 'PixelmindSolutions'}
             </span>
           </div>
         </div>
@@ -123,8 +133,8 @@ const Header = ({ onToggleSidebar, onLogout, isMobile, isTablet, sidebarOpen }) 
                 className="absolute top-[calc(100%+8px)] sm:top-[calc(100%+12px)] right-0 z-[1100] bg-white/90 backdrop-blur-xl border border-white/50 rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden p-1.5 sm:p-2 min-w-[180px] sm:min-w-[220px] animate-[slideDownHeader_0.3s_cubic-bezier(0.2,0.9,0.4,1)]"
               >
                 <div className="px-2 sm:px-3 py-2 border-b border-gray-100">
-                  <div className="font-bold text-teal-700 text-xs sm:text-sm truncate">Alexander Pierce</div>
-                  <small className="text-gray-500 text-[10px] sm:text-xs truncate block">admin@pixelmind.com</small>
+                  <div className="font-bold text-teal-700 text-xs sm:text-sm truncate">{staffDetails.name}</div>
+                  <small className="text-gray-500 text-[10px] sm:text-xs truncate block">{staffDetails.email}</small>
                 </div>
 
                 <button
@@ -132,7 +142,7 @@ const Header = ({ onToggleSidebar, onLogout, isMobile, isTablet, sidebarOpen }) 
                   onClick={handleLogout}
                 >
                   <MdLogout size={16} className="sm:text-[18px] text-red-400" />
-                  <span className="text-red-500 font-semibold">Secure Logout</span>
+                  <span className="text-red-500 font-semibold">Logout</span>
                 </button>
               </div>
             )}

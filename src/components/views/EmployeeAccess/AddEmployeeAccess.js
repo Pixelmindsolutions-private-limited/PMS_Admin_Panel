@@ -31,6 +31,7 @@ import {
   MdLock,
   MdPerson,
   MdInfo,
+  Md1kPlus,
 } from 'react-icons/md';
 
 const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api/admin-staff";
@@ -53,7 +54,7 @@ const menuItems = [
     label: 'Staff Management',
     icon: <MdPeople />,
     items: [
-      { name: 'All Staff', permission: ['view', 'edit', 'delete', 'export'] },
+      { name: 'All Staff', permission: ['add', 'view', 'edit', 'delete', 'export'] },
     ]
   },
   {
@@ -61,7 +62,7 @@ const menuItems = [
     label: 'Clients',
     icon: <MdFolder />,
     items: [
-      { name: 'All Clients', permission: ['view', 'edit', 'delete', 'export'] }
+      { name: 'All Clients', permission: ['add', 'view', 'edit', 'delete', 'export'] }
     ]
   },
   {
@@ -69,7 +70,7 @@ const menuItems = [
     label: 'Projects',
     icon: <MdFolder />,
     items: [
-      { name: 'All Projects', permission: ['view', 'edit', 'delete', 'export'] }
+      { name: 'All Projects', permission: ['add', 'view', 'edit', 'delete', 'export'] }
     ]
   },
   {
@@ -77,7 +78,7 @@ const menuItems = [
     label: 'Installments',
     icon: <MdFolder />,
     items: [
-      { name: 'All Installments', permission: ['view', 'edit', 'delete', 'export'] }
+      { name: 'All Installments', permission: ['add', 'view', 'edit', 'delete', 'export'] }
     ]
   },
   {
@@ -85,7 +86,7 @@ const menuItems = [
     label: 'Work Allocation',
     icon: <MdAssignment />,
     items: [
-      { name: 'All Worksheets', permission: ['view', 'edit', 'delete', 'export'] }
+      { name: 'All Worksheets', permission: ['add', 'view', 'edit', 'delete', 'export'] }
     ]
   },
   {
@@ -93,7 +94,7 @@ const menuItems = [
     label: 'Attendance',
     icon: <MdSchedule />,
     items: [
-      { name: 'Attendance', permission: ['view', 'edit', 'delete', 'export'] }
+      { name: 'Attendance', permission: ['add', 'view', 'edit', 'delete', 'export'] }
     ]
   },
   {
@@ -101,17 +102,18 @@ const menuItems = [
     label: 'Invoicing',
     icon: <MdFolder />,
     items: [
-      { name: 'Invoices', permission: ['view', 'edit', 'delete', 'export'] }
+      { name: 'Invoices', permission: ['add', 'view', 'edit', 'delete', 'export'] }
     ]
   }
 ];
 
 // Permission options for each item
-const PERMISSION_OPTIONS = ['view', 'create', 'edit', 'delete', 'manage', 'full'];
+const PERMISSION_OPTIONS = ['add', 'view', 'create', 'edit', 'delete'];
 
 // Get icon for permission type
 const getPermissionIcon = (permission) => {
   switch(permission) {
+    case 'add': return <Md1kPlus size={14} />;
     case 'view': return <MdVisibility size={14} />;
     case 'create': return <MdAddCircleOutline size={14} />;
     case 'edit': return <MdEdit size={14} />;
@@ -124,6 +126,7 @@ const getPermissionIcon = (permission) => {
 // Get color for permission type
 const getPermissionColor = (permission) => {
   switch(permission) {
+    case 'add': return 'text-yellow-500 bg-yellow-50 border-yellow-200';
     case 'view': return 'text-blue-500 bg-blue-50 border-blue-200';
     case 'create': return 'text-green-500 bg-green-50 border-green-200';
     case 'edit': return 'text-amber-500 bg-amber-50 border-amber-200';
@@ -298,6 +301,7 @@ const AddEmployeeAccess = () => {
           setShowCredentials(false);
           fetchStaffList();
         }, 6000);
+        navigate('/employee-access');
       } else {
         alert(data.message || "Failed to assign permissions");
       }

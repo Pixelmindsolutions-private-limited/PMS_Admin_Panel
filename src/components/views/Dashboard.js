@@ -139,14 +139,14 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const adminDetails = (() => {
-    try { return JSON.parse(sessionStorage.getItem("adminDetails") || "{}"); }
+  const loginDetails = (() => {
+    try { return JSON.parse(sessionStorage.getItem("loginDetails") || "{}"); }
     catch { return {}; }
   })();
 
-  const token = adminDetails?.token || "";
-  const adminName = adminDetails?.adminName || "Super Admin";
-  const adminId = adminDetails?.adminId || "69a963c38c12c50041a09932";
+  const token = loginDetails?.token || "";
+  const adminName = loginDetails?.name || "Super Admin";
+  const adminId = loginDetails?.id || "";
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -206,7 +206,7 @@ const Dashboard = () => {
         <div className="max-w-screen-xl mx-auto flex items-center justify-between gap-3 flex-wrap">
           <div className="min-w-0">
             <p className="text-teal-200 text-[10px] sm:text-xs uppercase tracking-widest font-semibold mb-0.5">
-              Admin Panel
+              {loginDetails.role} Panel
             </p>
             <h1 className="text-white text-xl sm:text-2xl lg:text-3xl font-extrabold leading-tight">
               Welcome back, {adminName} 👋

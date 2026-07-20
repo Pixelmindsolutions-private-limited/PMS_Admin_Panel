@@ -89,7 +89,9 @@ const Login = ({ onLogin }) => {
       // Save to sessionStorage
       sessionStorage.setItem('loginDetails', JSON.stringify({
         email: data.data.email,
-        adminId: data.data.id || null,
+        name: "Admin",
+        role: "Admin",
+        id: data.data.id || null,
         adminName: data.data.name || null,
         token: data.data.token || null,
       }));
