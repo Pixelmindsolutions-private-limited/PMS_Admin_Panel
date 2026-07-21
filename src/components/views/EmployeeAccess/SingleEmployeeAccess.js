@@ -41,70 +41,70 @@ const AUTH_TOKEN = adminDetails?.token;
 
 // Menu items for module permissions with detailed items
 const menuItems = [
-  { 
-    id: 'dashboard', 
-    label: 'Dashboard', 
-    icon: <MdDashboard />,
-    items: [
-      { name: 'Dashboard Page', permission: ['view'] }
-    ]
-  },
-  {
-    id: 'staffManagement',
-    label: 'Staff Management',
-    icon: <MdPeople />,
-    items: [
-      { name: 'All Staff', permission: ['add', 'view', 'edit', 'delete', 'export'] },
-    ]
-  },
-  {
-    id: 'clients',
-    label: 'Clients',
-    icon: <MdFolder />,
-    items: [
-      { name: 'All Clients', permission: ['add', 'view', 'edit', 'delete', 'export'] }
-    ]
-  },
-  {
-    id: 'projects',
-    label: 'Projects',
-    icon: <MdFolder />,
-    items: [
-      { name: 'All Projects', permission: ['add', 'view', 'edit', 'delete', 'export'] }
-    ]
-  },
-  {
-    id: 'installments',
-    label: 'Installments',
-    icon: <MdFolder />,
-    items: [
-      { name: 'All Installments', permission: ['add', 'view', 'edit', 'delete', 'export'] }
-    ]
-  },
-  {
-    id: 'assignedWorks',
-    label: 'Work Allocation',
-    icon: <MdAssignment />,
-    items: [
-      { name: 'All Worksheets', permission: ['add', 'view', 'edit', 'delete', 'export'] }
-    ]
-  },
-  {
-    id: 'attendance',
-    label: 'Attendance',
-    icon: <MdSchedule />,
-    items: [
-      { name: 'Attendance', permission: ['add', 'view', 'edit', 'delete', 'export'] }
-    ]
-  },
-  {
-    id: 'invoice',
-    label: 'Invoicing',
-    icon: <MdFolder />,
-    items: [
-      { name: 'Invoices', permission: ['add', 'view', 'edit', 'delete', 'export'] }
-    ]
-  }
+    {
+        id: 'dashboard',
+        label: 'Dashboard',
+        icon: <MdDashboard />,
+        items: [
+            { name: 'Dashboard Page', permission: ['view'] }
+        ]
+    },
+    {
+        id: 'staffManagement',
+        label: 'Staff Management',
+        icon: <MdPeople />,
+        items: [
+            { name: 'All Staff', permission: ['add', 'view', 'edit', 'delete', 'export'] },
+        ]
+    },
+    {
+        id: 'clients',
+        label: 'Clients',
+        icon: <MdFolder />,
+        items: [
+            { name: 'All Clients', permission: ['add', 'view', 'edit', 'delete', 'export'] }
+        ]
+    },
+    {
+        id: 'projects',
+        label: 'Projects',
+        icon: <MdFolder />,
+        items: [
+            { name: 'All Projects', permission: ['add', 'view', 'edit', 'delete', 'export'] }
+        ]
+    },
+    {
+        id: 'installments',
+        label: 'Installments',
+        icon: <MdFolder />,
+        items: [
+            { name: 'All Installments', permission: ['add', 'view', 'edit', 'delete', 'export'] }
+        ]
+    },
+    {
+        id: 'assignedWorks',
+        label: 'Work Allocation',
+        icon: <MdAssignment />,
+        items: [
+            { name: 'All Worksheets', permission: ['add', 'view', 'edit', 'delete', 'export'] }
+        ]
+    },
+    {
+        id: 'attendance',
+        label: 'Attendance',
+        icon: <MdSchedule />,
+        items: [
+            { name: 'Attendance', permission: ['add', 'view', 'edit', 'delete', 'export'] }
+        ]
+    },
+    {
+        id: 'invoice',
+        label: 'Invoicing',
+        icon: <MdFolder />,
+        items: [
+            { name: 'Invoices', permission: ['add', 'view', 'edit', 'delete', 'export'] }
+        ]
+    }
 ];
 
 // Permission options for each item
@@ -112,7 +112,7 @@ const PERMISSION_OPTIONS = ['add', 'view', 'create', 'edit', 'delete'];
 
 // Get icon for permission type
 const getPermissionIcon = (permission) => {
-    switch(permission) {
+    switch (permission) {
         case 'add': return <Md1kPlus size={14} />;
         case 'view': return <MdVisibility size={14} />;
         case 'create': return <MdAddCircleOutline size={14} />;
@@ -125,7 +125,7 @@ const getPermissionIcon = (permission) => {
 
 // Get color for permission type
 const getPermissionColor = (permission) => {
-    switch(permission) {
+    switch (permission) {
         case 'add': return 'text-yellow-500 bg-yellow-50 border-yellow-200';
         case 'view': return 'text-blue-500 bg-blue-50 border-blue-200';
         case 'create': return 'text-green-500 bg-green-50 border-green-200';
@@ -234,13 +234,13 @@ const SingleEmployeeAccess = () => {
 
             const json = await response.json();
             console.log("Access details response:", json);
-            
+
             if (json.success) {
                 setAccessDetails(json.data);
 
                 // Process modulePermissions - convert from array to array with items
                 let modulePermissions = json.data.modulePermissions || [];
-                
+
                 // If modulePermissions is an object, convert to array
                 if (!Array.isArray(modulePermissions)) {
                     modulePermissions = Object.keys(modulePermissions).map(key => ({
@@ -294,14 +294,14 @@ const SingleEmployeeAccess = () => {
     // Toggle individual permission for an item
     const toggleItemPermission = (moduleId, itemName, permission) => {
         if (!isEditing) return;
-        
+
         setPermissions((prev) => {
             const existingModule = prev.modulePermissions.find(
                 p => p.component === moduleId
             );
-            
+
             let updatedModulePermissions;
-            
+
             if (existingModule) {
                 const updatedItems = existingModule.items.map(item => {
                     if (item.name === itemName) {
@@ -314,7 +314,7 @@ const SingleEmployeeAccess = () => {
                     }
                     return item;
                 });
-                
+
                 updatedModulePermissions = prev.modulePermissions.map(p =>
                     p.component === moduleId ? { ...p, items: updatedItems } : p
                 );
@@ -326,7 +326,7 @@ const SingleEmployeeAccess = () => {
                 }));
                 updatedModulePermissions = [...prev.modulePermissions, { component: moduleId, items }];
             }
-            
+
             return { ...prev, modulePermissions: updatedModulePermissions };
         });
     };
@@ -334,31 +334,31 @@ const SingleEmployeeAccess = () => {
     // Toggle all permissions for an item
     const toggleAllPermissionsForItem = (moduleId, itemName) => {
         if (!isEditing) return;
-        
+
         setPermissions((prev) => {
             const existingModule = prev.modulePermissions.find(
                 p => p.component === moduleId
             );
-            
+
             let updatedModulePermissions;
             const menuItem = menuItems.find(m => m.id === moduleId);
             const itemConfig = menuItem?.items.find(i => i.name === itemName);
-            
+
             if (existingModule) {
                 const updatedItems = existingModule.items.map(item => {
                     if (item.name === itemName) {
                         const allPermissions = itemConfig?.permission || [];
                         const currentPermissions = item.permission || [];
                         const allSelected = allPermissions.every(p => currentPermissions.includes(p));
-                        
-                        return { 
-                            ...item, 
-                            permission: allSelected ? [] : [...allPermissions] 
+
+                        return {
+                            ...item,
+                            permission: allSelected ? [] : [...allPermissions]
                         };
                     }
                     return item;
                 });
-                
+
                 updatedModulePermissions = prev.modulePermissions.map(p =>
                     p.component === moduleId ? { ...p, items: updatedItems } : p
                 );
@@ -369,7 +369,7 @@ const SingleEmployeeAccess = () => {
                 }));
                 updatedModulePermissions = [...prev.modulePermissions, { component: moduleId, items }];
             }
-            
+
             return { ...prev, modulePermissions: updatedModulePermissions };
         });
     };
@@ -404,15 +404,15 @@ const SingleEmployeeAccess = () => {
     // Toggle entire module
     const toggleModule = (moduleId) => {
         if (!isEditing) return;
-        
+
         setPermissions((prev) => {
             const existingModule = prev.modulePermissions.find(
                 p => p.component === moduleId
             );
-            
+
             let updatedModulePermissions;
             const menuItem = menuItems.find(m => m.id === moduleId);
-            
+
             if (existingModule) {
                 let allFullyEnabled = true;
                 menuItem.items.forEach(itemConfig => {
@@ -421,12 +421,12 @@ const SingleEmployeeAccess = () => {
                         allFullyEnabled = false;
                     }
                 });
-                
+
                 const newItems = menuItem.items.map(itemConfig => ({
                     name: itemConfig.name,
                     permission: allFullyEnabled ? [] : [...itemConfig.permission]
                 }));
-                
+
                 updatedModulePermissions = prev.modulePermissions.map(p =>
                     p.component === moduleId ? { ...p, items: newItems } : p
                 );
@@ -437,7 +437,7 @@ const SingleEmployeeAccess = () => {
                 }));
                 updatedModulePermissions = [...prev.modulePermissions, { component: moduleId, items }];
             }
-            
+
             return { ...prev, modulePermissions: updatedModulePermissions };
         });
     };
@@ -541,7 +541,7 @@ const SingleEmployeeAccess = () => {
 
             const data = await response.json();
             console.log("Update response:", data);
-            
+
             if (response.ok) {
                 setSuccessMessage("✅ Permissions updated successfully!");
                 setShowSuccess(true);
@@ -607,7 +607,7 @@ const SingleEmployeeAccess = () => {
     // Count enabled modules
     const getEnabledModulesCount = (modulePermissions) => {
         if (!modulePermissions || !Array.isArray(modulePermissions)) return 0;
-        return modulePermissions.filter(module => 
+        return modulePermissions.filter(module =>
             module.items && module.items.some(item => item.permission && item.permission.length > 0)
         ).length;
     };
@@ -747,12 +747,21 @@ const SingleEmployeeAccess = () => {
                     <>
                         {/* Employee Info */}
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-5">
-                            <div className="bg-white/80 backdrop-blur-xl rounded-xl p-4 border border-teal-100/50 shadow-xl shadow-teal-500/5">
-                                <div className="flex items-center gap-2">
-                                    <MdEmail className="text-teal-500" size={18} />
-                                    <div>
-                                        <p className="text-xs text-gray-500">Email</p>
-                                        <p className="text-sm font-medium text-gray-700 truncate">{employee?.email || "N/A"}</p>
+                            <div className="bg-white/80 backdrop-blur-xl rounded-xl p-3 sm:p-4 border border-teal-100/50 shadow-xl shadow-teal-500/5">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-shrink-0">
+                                        <MdEmail className="text-teal-500 w-5 h-5" />
+                                    </div>
+
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[11px] sm:text-xs text-gray-500">Email</p>
+
+                                        <p
+                                            className="text-xs sm:text-sm font-medium text-gray-700 break-words"
+                                            title={employee?.email}
+                                        >
+                                            {employee?.email || "N/A"}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -789,19 +798,16 @@ const SingleEmployeeAccess = () => {
 
                         {/* Access Status */}
                         <div className="flex flex-wrap items-center gap-3 mb-5 p-4 bg-teal-50/50 rounded-xl border border-teal-100">
-                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-                                permissions.isLoginAllowed !== false ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                            }`}>
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${permissions.isLoginAllowed !== false ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                }`}>
                                 {permissions.isLoginAllowed !== false ? "✓ Login Allowed" : "✗ Login Restricted"}
                             </span>
-                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-                                permissions.isReadOnly ? "bg-orange-100 text-orange-700" : "bg-teal-100 text-teal-700"
-                            }`}>
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${permissions.isReadOnly ? "bg-orange-100 text-orange-700" : "bg-teal-100 text-teal-700"
+                                }`}>
                                 {permissions.isReadOnly ? "🔒 Read Only" : "🔓 Full Access"}
                             </span>
-                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
-                                permissions.isAllProjectsAllowed ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"
-                            }`}>
+                            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${permissions.isAllProjectsAllowed ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-600"
+                                }`}>
                                 {permissions.isAllProjectsAllowed ? "🌐 All Projects" : "📁 Selected Projects"}
                             </span>
                             <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
@@ -830,7 +836,7 @@ const SingleEmployeeAccess = () => {
                                         <span className="text-xs text-gray-400 ml-2 font-normal">(View Only)</span>
                                     )}
                                 </h3>
-                                
+
                                 {isEditing ? (
                                     // Edit mode with detailed permissions
                                     <div className="space-y-3">
@@ -840,15 +846,14 @@ const SingleEmployeeAccess = () => {
                                             );
                                             const isFullyEnabled = isModuleFullyEnabled(menuItem.id);
                                             const isPartial = isModulePartiallyEnabled(menuItem.id);
-                                            
+
                                             return (
                                                 <div
                                                     key={menuItem.id}
-                                                    className={`border-2 rounded-lg p-3 transition-all duration-200 ${
-                                                        isActive 
-                                                            ? 'border-teal-400 bg-gradient-to-br from-teal-50/80 to-emerald-50/80' 
-                                                            : 'border-gray-200 hover:border-teal-200'
-                                                    }`}
+                                                    className={`border-2 rounded-lg p-3 transition-all duration-200 ${isActive
+                                                        ? 'border-teal-400 bg-gradient-to-br from-teal-50/80 to-emerald-50/80'
+                                                        : 'border-gray-200 hover:border-teal-200'
+                                                        }`}
                                                 >
                                                     <div
                                                         className="flex items-center justify-between cursor-pointer"
@@ -864,13 +869,12 @@ const SingleEmployeeAccess = () => {
                                                         </div>
                                                         <div className="flex items-center gap-2">
                                                             {isActive && (
-                                                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-                                                                    isFullyEnabled 
-                                                                        ? 'bg-teal-100 text-teal-700' 
-                                                                        : isPartial
+                                                                <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${isFullyEnabled
+                                                                    ? 'bg-teal-100 text-teal-700'
+                                                                    : isPartial
                                                                         ? 'bg-amber-100 text-amber-700'
                                                                         : 'bg-gray-100 text-gray-500'
-                                                                }`}>
+                                                                    }`}>
                                                                     {isFullyEnabled ? 'All' : isPartial ? 'Partial' : 'None'}
                                                                 </span>
                                                             )}
@@ -886,18 +890,17 @@ const SingleEmployeeAccess = () => {
                                                             const hasPerm = hasAnyPermission(menuItem.id, item.name);
                                                             const allPerms = hasAllPermissions(menuItem.id, item.name);
                                                             const availablePermissions = item.permission || [];
-                                                            
+
                                                             return (
                                                                 <div
                                                                     key={item.name}
-                                                                    className={`border rounded-lg p-2 transition-all duration-200 ${
-                                                                        hasPerm 
-                                                                            ? 'border-teal-200 bg-white/60' 
-                                                                            : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100'
-                                                                    }`}
+                                                                    className={`border rounded-lg p-2 transition-all duration-200 ${hasPerm
+                                                                        ? 'border-teal-200 bg-white/60'
+                                                                        : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100'
+                                                                        }`}
                                                                 >
                                                                     <div className="flex items-center justify-between mb-1">
-                                                                        <div 
+                                                                        <div
                                                                             className="flex items-center gap-2 cursor-pointer flex-1"
                                                                             onClick={() => toggleAllPermissionsForItem(menuItem.id, item.name)}
                                                                         >
@@ -905,11 +908,10 @@ const SingleEmployeeAccess = () => {
                                                                                 {item.name}
                                                                             </span>
                                                                             {hasPerm && (
-                                                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                                                                                    allPerms 
-                                                                                        ? 'bg-teal-100 text-teal-700' 
-                                                                                        : 'bg-amber-100 text-amber-700'
-                                                                                }`}>
+                                                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${allPerms
+                                                                                    ? 'bg-teal-100 text-teal-700'
+                                                                                    : 'bg-amber-100 text-amber-700'
+                                                                                    }`}>
                                                                                     {allPerms ? 'All' : `${item.permission.length}/${availablePermissions.length}`}
                                                                                 </span>
                                                                             )}
@@ -928,11 +930,10 @@ const SingleEmployeeAccess = () => {
                                                                                 <button
                                                                                     key={permission}
                                                                                     onClick={() => toggleItemPermission(menuItem.id, item.name, permission)}
-                                                                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium border transition-all duration-200 ${
-                                                                                        isEnabled
-                                                                                            ? `${getPermissionColor(permission)} shadow-sm`
-                                                                                            : 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200'
-                                                                                    }`}
+                                                                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-medium border transition-all duration-200 ${isEnabled
+                                                                                        ? `${getPermissionColor(permission)} shadow-sm`
+                                                                                        : 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200'
+                                                                                        }`}
                                                                                 >
                                                                                     {getPermissionIcon(permission)}
                                                                                     {getPermissionLabel(permission)}
@@ -958,15 +959,14 @@ const SingleEmployeeAccess = () => {
                                             const hasPermission = permissions.modulePermissions.some(
                                                 p => p.component === item.id && p.items.some(i => i.permission && i.permission.length > 0)
                                             );
-                                            
+
                                             return (
                                                 <div
                                                     key={item.id}
-                                                    className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${
-                                                        hasPermission
-                                                            ? "border-teal-300 bg-teal-50/50"
-                                                            : "border-gray-200"
-                                                    }`}
+                                                    className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${hasPermission
+                                                        ? "border-teal-300 bg-teal-50/50"
+                                                        : "border-gray-200"
+                                                        }`}
                                                 >
                                                     <div className="text-teal-500 shrink-0">{item.icon}</div>
                                                     <span className="text-xs font-medium text-gray-700 flex-1">{item.label}</span>
@@ -995,11 +995,10 @@ const SingleEmployeeAccess = () => {
                                     {isEditing && (
                                         <button
                                             onClick={toggleAllProjects}
-                                            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                                                permissions.isAllProjectsAllowed
-                                                    ? "bg-teal-500 text-white"
-                                                    : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-                                            }`}
+                                            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${permissions.isAllProjectsAllowed
+                                                ? "bg-teal-500 text-white"
+                                                : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                                                }`}
                                         >
                                             {permissions.isAllProjectsAllowed ? "All Projects" : "Select Projects"}
                                         </button>
@@ -1024,9 +1023,8 @@ const SingleEmployeeAccess = () => {
                                                 return (
                                                     <div
                                                         key={projectId}
-                                                        className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${
-                                                            isEditing ? "border-teal-300 bg-teal-50" : "border-gray-200 bg-gray-50"
-                                                        }`}
+                                                        className={`flex items-center gap-2 p-2 rounded-lg border transition-colors ${isEditing ? "border-teal-300 bg-teal-50" : "border-gray-200 bg-gray-50"
+                                                            }`}
                                                     >
                                                         <button
                                                             onClick={() => toggleProjectSelection(projectId)}

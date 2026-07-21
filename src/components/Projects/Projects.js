@@ -16,6 +16,8 @@ const permission = loginDetails?.modulePermissions?.find(
 
 const access = permission?.items?.[0]?.permission || [];
 
+const allowedProjectIds = loginDetails?.allowedProjects?.map((p) => p.projectId) || [];
+
 const headers = () => ({
   Authorization: `Bearer ${AUTH_TOKEN}`,
   'Content-Type': 'application/json',
@@ -174,21 +176,39 @@ const Projects = () => {
   const fetchProjects = async () => {
     setLoading(true);
     setError(null);
+
     try {
       const response = await fetch(`${API_URL}/all`, {
-        headers: headers()
+        headers: headers(),
       });
+
       const data = await response.json();
 
       if (data.success) {
-        const projectsData = Array.isArray(data.data) ? data.data : [];
+        let projectsData = Array.isArray(data.data) ? data.data : [];
+
+        // If Staff and not allowed all projects
+        if (
+          loginDetails?.role === "Staff" &&
+          !loginDetails?.isAllProjectsAllowed
+        ) {
+          const allowedProjectIds =
+            loginDetails?.allowedProjects?.map((p) => p.projectId) || [];
+
+          projectsData = projectsData.filter((project) =>
+            allowedProjectIds.includes(project._id)
+          );
+
+        }
+
         setProjects(projectsData);
       } else {
-        throw new Error(data.message || 'Failed to load projects');
+        throw new Error(data.message || "Failed to load projects");
       }
+
     } catch (err) {
-      console.error('Fetch error:', err);
-      setError(err.message || 'Network error');
+      console.error("Fetch error:", err);
+      setError(err.message || "Network error");
     } finally {
       setLoading(false);
     }

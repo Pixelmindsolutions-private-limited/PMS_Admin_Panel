@@ -99,7 +99,6 @@ const StatCard = ({ link, label, count }) => {
 
   const navigate = useNavigate();
 
-  console.log("Link :", link)
 
   const m = STAT_MAP[label] || STAT_MAP.Projects;
   const Icon = m.icon;

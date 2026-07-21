@@ -212,8 +212,8 @@ const BOTTOM_MENU_ITEMS = [
     description: 'Preferences',
     moduleKey: 'settings',
     submenu: [
-      { path: '/settings/general', label: 'General Settings', icon: <MdSettings />, description: 'System preferences', access: 'view' },
-      { path: '/settings/company', label: 'Company Info', icon: <MdFolder />, description: 'Business details', access: 'view' },
+      { path: '/marketing-plans', label: 'Digital Marketing', icon: <MdSettings />, description: 'Package Management', access: 'view' },
+      { path: 'company-info', label: 'Company Info', icon: <MdFolder />, description: 'company details', access: 'view' },
       { path: '/settings/notifications', label: 'Notifications', icon: <MdListAlt />, description: 'Alert preferences', access: 'view' },
     ],
   },
