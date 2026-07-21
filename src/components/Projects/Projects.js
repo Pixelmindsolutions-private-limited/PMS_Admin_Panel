@@ -11,7 +11,7 @@ const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 const AUTH_TOKEN = loginDetails?.token;
 
 const permission = loginDetails?.modulePermissions?.find(
-  (item) => item.component === "staffManagement"
+  (item) => item.component === "projects"
 );
 
 const access = permission?.items?.[0]?.permission || [];

@@ -23,10 +23,10 @@ const AddAttendance = () => {
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const adminDetails = JSON.parse(
-          sessionStorage.getItem("adminDetails")
+        const loginDetails = JSON.parse(
+          sessionStorage.getItem("loginDetails")
         );
-        const AUTH_TOKEN = adminDetails?.token;
+        const AUTH_TOKEN = loginDetails?.token;
 
         if (!AUTH_TOKEN) {
           alert("Session expired. Please login again.");
@@ -81,10 +81,10 @@ const AddAttendance = () => {
       return;
     }
 
-    const adminDetails = JSON.parse(
-      sessionStorage.getItem("adminDetails")
+    const loginDetails = JSON.parse(
+      sessionStorage.getItem("loginDetails")
     );
-    const AUTH_TOKEN = adminDetails?.token;
+    const AUTH_TOKEN = loginDetails?.token;
 
     const payload = {
       staffId: selectedStaff.employeeId,

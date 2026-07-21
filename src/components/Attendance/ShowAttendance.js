@@ -26,8 +26,16 @@ const STATS_API = "https://pmsbackend.pixelmindsolutions.com/api/attendance/stat
 const ATTENDANCE_API = "https://pmsbackend.pixelmindsolutions.com/api/attendance";
 const STAFF_API = "https://pmsbackend.pixelmindsolutions.com/api/attendance/staff";
 
-const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
-const AUTH_TOKEN = adminDetails?.token;
+const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
+
+const AUTH_TOKEN = loginDetails?.token;
+
+const permission = loginDetails?.modulePermissions?.find(
+  (item) => item.component === "attendance"
+);
+
+const access = permission?.items?.[0]?.permission || [];
+
 const authHeaders = () => ({ Authorization: `Bearer ${AUTH_TOKEN}` });
 
 /* ──────────────────────────────────────────── */
@@ -670,9 +678,11 @@ const ShowAttendance = () => {
                       <p className="font-bold text-gray-800 text-sm truncate">{s.name}</p>
                       <p className="text-xs text-gray-400">{s.total} record{s.total !== 1 ? "s" : ""}</p>
                     </div>
-                    <span className="text-xs text-teal-500 group-hover:text-teal-700 font-semibold whitespace-nowrap">
-                      View →
-                    </span>
+                    {(loginDetails?.role === "Admin" || access.includes("view")) && (
+                      <span className="text-xs text-teal-500 group-hover:text-teal-700 font-semibold whitespace-nowrap">
+                        View →
+                      </span>
+                    )}
                   </div>
                   <div className="grid grid-cols-3 gap-2">
                     {[

@@ -12,8 +12,15 @@ const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects/all";
 const INSTALLMENT_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects";
 const UPCOMING_INSTALLMENTS_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects/upcominginstallments";
 const SEND_REMINDER_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects/sendremainder";
-const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
-const AUTH_TOKEN = adminDetails?.token;
+const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
+
+const AUTH_TOKEN = loginDetails?.token;
+
+const permission = loginDetails?.modulePermissions?.find(
+  (item) => item.component === "installments"
+);
+
+const access = permission?.items?.[0]?.permission || [];
 
 const AddInstallment = () => {
   const navigate = useNavigate();
@@ -697,30 +704,34 @@ const AddInstallment = () => {
             </div>
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-            <button
-              onClick={fetchUpcomingInstallments}
-              disabled={upcomingLoading}
-              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-orange-500/30 transition-all hover:shadow-xl flex-1 sm:flex-none disabled:opacity-60"
-            >
-              {upcomingLoading ? (
-                <Loader size={14} className="animate-spin" />
-              ) : (
-                <Bell size={14} />
-              )}
-              <span className="hidden xs:inline">Upcoming</span> Installments
-            </button>
-            <button
-              onClick={sendAllReminders}
-              disabled={sendingAllReminders || !upcomingData || upcomingData.installments?.length === 0}
-              className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-teal-500/30 transition-all hover:shadow-xl flex-1 sm:flex-none disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {sendingAllReminders ? (
-                <Loader size={14} className="animate-spin" />
-              ) : (
-                <Send size={14} />
-              )}
-              Send Reminder
-            </button>
+            {(loginDetails?.role === "Admin" || access.includes("view")) && (
+              <button
+                onClick={fetchUpcomingInstallments}
+                disabled={upcomingLoading}
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-orange-500/30 transition-all hover:shadow-xl flex-1 sm:flex-none disabled:opacity-60"
+              >
+                {upcomingLoading ? (
+                  <Loader size={14} className="animate-spin" />
+                ) : (
+                  <Bell size={14} />
+                )}
+                <span className="hidden xs:inline">Upcoming</span> Installments
+              </button>
+            )}
+            {(loginDetails?.role === "Admin" || access.includes("export")) && (
+              <button
+                onClick={sendAllReminders}
+                disabled={sendingAllReminders || !upcomingData || upcomingData.installments?.length === 0}
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white font-semibold text-xs sm:text-sm shadow-lg shadow-teal-500/30 transition-all hover:shadow-xl flex-1 sm:flex-none disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {sendingAllReminders ? (
+                  <Loader size={14} className="animate-spin" />
+                ) : (
+                  <Send size={14} />
+                )}
+                Send Reminder
+              </button>
+            )}
             <button
               onClick={() => navigate("/projects")}
               className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-white border border-gray-200 hover:border-teal-300 text-gray-600 font-semibold text-xs sm:text-sm hover:shadow-md transition-all flex-1 sm:flex-none"
@@ -798,20 +809,22 @@ const AddInstallment = () => {
                   <span className="text-[10px] sm:text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">💰 Installments</span>
                   <div className="flex-1 h-px w-8 sm:w-12 bg-gradient-to-l from-transparent to-teal-300/30"></div>
                 </div>
-                <div className="flex gap-1 sm:gap-2 ml-2">
-                  {installments.length < (selectedProject.paymentMilestone || 0) && (
-                    <button
-                      onClick={() => {
-                        setShowInstallmentForm(!showInstallmentForm);
-                        setEditingInstallment(null);
-                        resetForm();
-                      }}
-                      className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[10px] sm:text-xs font-semibold transition-colors"
-                    >
-                      <Plus size={12} /> <span className="hidden xs:inline">Add</span>
-                    </button>
-                  )}
-                </div>
+                {(loginDetails?.role === "Admin" || access.includes("add")) && (
+                  <div className="flex gap-1 sm:gap-2 ml-2">
+                    {installments.length < (selectedProject.paymentMilestone || 0) && (
+                      <button
+                        onClick={() => {
+                          setShowInstallmentForm(!showInstallmentForm);
+                          setEditingInstallment(null);
+                          resetForm();
+                        }}
+                        className="flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[10px] sm:text-xs font-semibold transition-colors"
+                      >
+                        <Plus size={12} /> <span className="hidden xs:inline">Add</span>
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Show remaining slots info */}
@@ -992,24 +1005,28 @@ const AddInstallment = () => {
 
                             {/* Right Side */}
                             {installment.status !== "paid" && (
-                              <button
-                                onClick={() => markAsPaid(installment)}
-                                disabled={
-                                  markingPaid &&
-                                  selectedPaidInstallment?._id === installment._id
-                                }
-                                className="shrink-0 flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[8px] sm:text-[10px] font-semibold transition-colors disabled:opacity-60"
-                                title="Mark as Paid"
-                              >
-                                {markingPaid &&
-                                  selectedPaidInstallment?._id === installment._id ? (
-                                  <Loader size={12} className="animate-spin" />
-                                ) : (
-                                  <Check size={12} />
-                                )}
+                              <>
+                                {(loginDetails?.role === "Admin" || access.includes("edit")) && (
+                                  <button
+                                    onClick={() => markAsPaid(installment)}
+                                    disabled={
+                                      markingPaid &&
+                                      selectedPaidInstallment?._id === installment._id
+                                    }
+                                    className="shrink-0 flex items-center gap-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-[8px] sm:text-[10px] font-semibold transition-colors disabled:opacity-60"
+                                    title="Mark as Paid"
+                                  >
+                                    {markingPaid &&
+                                      selectedPaidInstallment?._id === installment._id ? (
+                                      <Loader size={12} className="animate-spin" />
+                                    ) : (
+                                      <Check size={12} />
+                                    )}
 
-                                <span className="hidden sm:inline">Mark Paid</span>
-                              </button>
+                                    <span className="hidden sm:inline">Mark Paid</span>
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
@@ -1019,22 +1036,26 @@ const AddInstallment = () => {
                           </span>
 
                           {/* Edit Button */}
-                          <button
-                            onClick={() => handleEditInstallment(installment)}
-                            className="p-1 sm:p-1.5 text-gray-400 hover:text-teal-600 transition-colors rounded-lg hover:bg-teal-50"
-                            title="Edit"
-                          >
-                            <Edit size={14} />
-                          </button>
+                          {(loginDetails?.role === "Admin" || access.includes("edit")) && (
+                            <button
+                              onClick={() => handleEditInstallment(installment)}
+                              className="p-1 sm:p-1.5 text-gray-400 hover:text-teal-600 transition-colors rounded-lg hover:bg-teal-50"
+                              title="Edit"
+                            >
+                              <Edit size={14} />
+                            </button>
+                          )}
 
                           {/* Delete Button */}
-                          <button
-                            onClick={() => handleDeleteInstallment(installment._id)}
-                            className="p-1 sm:p-1.5 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
-                            title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {(loginDetails?.role === "Admin" || access.includes("delete")) && (
+                            <button
+                              onClick={() => handleDeleteInstallment(installment._id)}
+                              className="p-1 sm:p-1.5 text-gray-400 hover:text-red-600 transition-colors rounded-lg hover:bg-red-50"
+                              title="Delete"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
 
 
                         </div>
