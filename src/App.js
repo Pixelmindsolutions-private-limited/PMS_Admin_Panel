@@ -17,7 +17,7 @@ import EditStaff from './components/Employee/EditStaff';
 import EditProject from './components/Projects/EditProject';
 import EditWorksheet from './components/Tasks/EditWorksheet';
 import AddAttendance from './components/Attendance/AddAttendance';
-import ShowAttendance from './components/Attendance/ShowAttendance';
+import AllStaffAttendance from './components/Attendance/ShowAttendance';
 import CreateInvoice from './components/Invoice/CreateInvoice';
 import ShowInvoices from './components/Invoice/ShowInvoices';
 import CreatePayslip from './components/Payslips/CreatePayslip';
@@ -38,6 +38,7 @@ import EmployeeAccessList from './components/views/EmployeeAccess/AccessEmployee
 import SingleEmployeeAccess from './components/views/EmployeeAccess/SingleEmployeeAccess';
 import DigitalMarketingPlans from './components/views/DigitalMarketingPlans';
 import CompanyInfo from './components/views/CampanyInfo';
+import SingleStaffAttendance from './components/Attendance/SingleStaffAttendance';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
@@ -60,7 +61,7 @@ function App() {
         element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
       />
 
-      <Route path='/staff-login' element={<StaffLogin onLogin={handleLogin} />}/>
+      <Route path='/staff-login' element={<StaffLogin onLogin={handleLogin} />} />
 
       <Route
         path="/"
@@ -90,7 +91,10 @@ function App() {
         <Route path="edit-worksheet/:id" element={<EditWorksheet />} />
 
         <Route path="add-attendance" element={<AddAttendance />} />
-        <Route path="attendance" element={<ShowAttendance />} />
+        <Route path="attendance" element={<AllStaffAttendance />} />
+        <Route path="attendance/:staffId" element={<SingleStaffAttendance />} />
+
+
 
         <Route path="work-session-live" element={<WorkSessionLive />} />
         <Route path="work-session-history" element={<WorkSessionHistory />} />
@@ -107,8 +111,8 @@ function App() {
         <Route path="employee-access" element={<EmployeeAccessList />} />
         <Route path="employee-access/:staffId" element={<SingleEmployeeAccess />} />
 
-        <Route path='marketing-plans' element={<DigitalMarketingPlans/>}/>
-        <Route path='company-info' element={<CompanyInfo/>}/>
+        <Route path='marketing-plans' element={<DigitalMarketingPlans />} />
+        <Route path='company-info' element={<CompanyInfo />} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>

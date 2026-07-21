@@ -58,10 +58,46 @@ const STAT_MAP = {
 const PIE_COLORS = ["#0891b2", "#059669", "#e11d48", "#f59e0b"];
 
 const QUICK_LINKS = [
-  { label: "Create Staff", icon: UserPlus, gradient: "from-violet-500 to-violet-600", shadow: "shadow-violet-200", route: "/staff/create" },
-  { label: "Create Project", icon: FilePlus, gradient: "from-teal-500 to-teal-600", shadow: "shadow-teal-200", route: "/projects/create" },
-  { label: "Create Worksheet", icon: BookOpen, gradient: "from-sky-500 to-sky-600", shadow: "shadow-sky-200", route: "/worksheets/create" },
-  { label: "Mark Attendance", icon: ClipboardList, gradient: "from-amber-500 to-orange-500", shadow: "shadow-amber-200", route: "/attendance/mark" },
+  {
+    label: "Create Staff",
+    icon: UserPlus,
+    gradient: "from-violet-500 to-violet-600",
+    shadow: "shadow-violet-200",
+    route: "/staff/create",
+    component: "staffManagement",
+    item: "All Staff",
+    permission: "add",
+  },
+  {
+    label: "Create Project",
+    icon: FilePlus,
+    gradient: "from-teal-500 to-teal-600",
+    shadow: "shadow-teal-200",
+    route: "/projects/create",
+    component: "projects",
+    item: "All Projects",
+    permission: "add",
+  },
+  {
+    label: "Create Worksheet",
+    icon: BookOpen,
+    gradient: "from-sky-500 to-sky-600",
+    shadow: "shadow-sky-200",
+    route: "/worksheets/create",
+    component: "assignedWorks",
+    item: "All Worksheets",
+    permission: "add",
+  },
+  {
+    label: "Mark Attendance",
+    icon: ClipboardList,
+    gradient: "from-amber-500 to-orange-500",
+    shadow: "shadow-amber-200",
+    route: "/attendance/mark",
+    component: "attendance",
+    item: "Attendance",
+    permission: "add",
+  },
 ];
 
 /* ─── Animated counter ─── */
@@ -130,6 +166,26 @@ const CardHead = ({ children }) => (
   <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-slate-50 flex-wrap gap-2">
     {children}
   </div>
+);
+
+const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
+
+const hasPermission = (component, itemName, permission) => {
+  if (loginDetails?.role === "Admin") return true;
+
+  const module = loginDetails?.modulePermissions?.find(
+    (m) => m.component === component
+  );
+
+  if (!module) return false;
+
+  const item = module.items.find((i) => i.name === itemName);
+
+  return item?.permission?.includes(permission);
+};
+
+const visibleQuickLinks = QUICK_LINKS.filter((link) =>
+  hasPermission(link.component, link.item, link.permission)
 );
 
 /* ══════════════════════════════ MAIN ══════════════════════════════ */
@@ -505,28 +561,36 @@ const Dashboard = () => {
         </div>
 
         {/* ── QUICK LINKS (full width at bottom) ── */}
-        <Card>
-          <CardHead>
-            <div className="flex items-center gap-2">
-              <Zap size={15} className="text-teal-600" />
-              <p className="text-xs sm:text-sm font-bold text-slate-800">Quick Links</p>
+        {visibleQuickLinks.length > 0 && (
+          <Card>
+            <CardHead>
+              <div className="flex items-center gap-2">
+                <Zap size={15} className="text-teal-600" />
+                <p className="text-xs sm:text-sm font-bold text-slate-800">
+                  Quick Links
+                </p>
+              </div>
+            </CardHead>
+
+            <div className="p-4 sm:p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {visibleQuickLinks.map(({ label, icon: Icon, gradient, shadow, route }) => (
+                <button
+                  key={label}
+                  onClick={() => (window.location.href = route)}
+                  className={`flex flex-col items-center justify-center gap-3 py-5 sm:py-6 px-3 rounded-2xl bg-gradient-to-br ${gradient} text-white shadow-md ${shadow} hover:scale-[1.03] hover:shadow-xl active:scale-95 transition-all duration-200 w-full`}
+                >
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/20 flex items-center justify-center">
+                    <Icon size={22} />
+                  </div>
+
+                  <span className="text-[11px] sm:text-xs font-bold text-center leading-tight tracking-wide">
+                    {label}
+                  </span>
+                </button>
+              ))}
             </div>
-          </CardHead>
-          <div className="p-4 sm:p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {QUICK_LINKS.map(({ label, icon: Icon, gradient, shadow, route }) => (
-              <button
-                key={label}
-                onClick={() => (window.location.href = route)}
-                className={`flex flex-col items-center justify-center gap-3 py-5 sm:py-6 px-3 rounded-2xl bg-gradient-to-br ${gradient} text-white shadow-md ${shadow} hover:scale-[1.03] hover:shadow-xl active:scale-95 transition-all duration-200 w-full`}
-              >
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/20 flex items-center justify-center">
-                  <Icon size={22} className="text-white" />
-                </div>
-                <span className="text-[11px] sm:text-xs font-bold text-center leading-tight tracking-wide">{label}</span>
-              </button>
-            ))}
-          </div>
-        </Card>
+          </Card>
+        )}
 
         {/* Footer */}
         <p className="text-center text-[10px] text-slate-300 tracking-widest uppercase pb-2">
