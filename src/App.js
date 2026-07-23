@@ -39,6 +39,7 @@ import SingleEmployeeAccess from './components/views/EmployeeAccess/SingleEmploy
 import DigitalMarketingPlans from './components/views/DigitalMarketingPlans';
 import CompanyInfo from './components/views/CampanyInfo';
 import SingleStaffAttendance from './components/Attendance/SingleStaffAttendance';
+import EditInvoice from './components/Invoice/EditInvoice';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
@@ -102,6 +103,7 @@ function App() {
 
         <Route path="create-invoice" element={<CreateInvoice />} />
         <Route path="invoices" element={<ShowInvoices />} />
+        <Route path="/edit-invoice/:id" element={<EditInvoice />} />
         <Route path="invoices1" element={<AdvancedInvoice />} />
 
         <Route path="create-payslip" element={<CreatePayslip />} />

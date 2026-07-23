@@ -175,7 +175,7 @@ const ALL_MENU_ITEMS = [
     submenu: [
       { path: '/create-invoice', label: 'Create Invoice', icon: <MdAddCircleOutline />, description: 'New invoice', access: 'manage' },
       { path: '/invoices', label: 'Invoice List', icon: <MdListAlt />, description: 'All invoices', access: 'view' },
-      { path: '/invoices1', label: 'Advanced Invoice', icon: <MdDownload />, description: 'Pro format', access: 'view' },
+      // { path: '/invoices1', label: 'Advanced Invoice', icon: <MdDownload />, description: 'Pro format', access: 'view' },
     ],
   },
   {

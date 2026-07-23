@@ -102,7 +102,7 @@ const menuItems = [
         label: 'Invoicing',
         icon: <MdFolder />,
         items: [
-            { name: 'Invoices', permission: ['add', 'view', 'edit', 'delete', 'export'] }
+            { name: 'Invoices', permission: ['add', 'view', 'edit', 'delete', 'export', 'download'] }
         ]
     }
 ];
@@ -119,6 +119,7 @@ const getPermissionIcon = (permission) => {
         case 'edit': return <MdCreate size={14} />;
         case 'delete': return <MdDelete size={14} />;
         case 'export': return <MdDownload size={14} />;
+        case 'download': return <MdDownload size={14} />;
         default: return null;
     }
 };
@@ -132,6 +133,7 @@ const getPermissionColor = (permission) => {
         case 'edit': return 'text-amber-500 bg-amber-50 border-amber-200';
         case 'delete': return 'text-red-500 bg-red-50 border-red-200';
         case 'export': return 'text-purple-500 bg-purple-50 border-purple-200';
+        case 'download': return 'text-green-500 bg-green-50 border-green-200';
         default: return 'text-gray-500 bg-gray-50 border-gray-200';
     }
 };

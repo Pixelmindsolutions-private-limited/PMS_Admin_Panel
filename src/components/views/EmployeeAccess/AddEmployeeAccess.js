@@ -41,9 +41,9 @@ const AUTH_TOKEN = adminDetails?.token;
 
 // Menu items for module permissions with detailed items
 const menuItems = [
-  { 
-    id: 'dashboard', 
-    label: 'Dashboard', 
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
     icon: <MdDashboard />,
     items: [
       { name: 'Dashboard Page', permission: ['view'] }
@@ -102,7 +102,7 @@ const menuItems = [
     label: 'Invoicing',
     icon: <MdFolder />,
     items: [
-      { name: 'Invoices', permission: ['add', 'view', 'edit', 'delete', 'export'] }
+      { name: 'Invoices', permission: ['add', 'view', 'edit', 'delete', 'export', 'download'] }
     ]
   }
 ];
@@ -112,26 +112,28 @@ const PERMISSION_OPTIONS = ['add', 'view', 'create', 'edit', 'delete'];
 
 // Get icon for permission type
 const getPermissionIcon = (permission) => {
-  switch(permission) {
+  switch (permission) {
     case 'add': return <Md1kPlus size={14} />;
     case 'view': return <MdVisibility size={14} />;
     case 'create': return <MdAddCircleOutline size={14} />;
     case 'edit': return <MdEdit size={14} />;
     case 'delete': return <MdDelete size={14} />;
     case 'export': return <MdDownload size={14} />;
+    case 'download': return <MdDownload size={14} />;
     default: return null;
   }
 };
 
 // Get color for permission type
 const getPermissionColor = (permission) => {
-  switch(permission) {
+  switch (permission) {
     case 'add': return 'text-yellow-500 bg-yellow-50 border-yellow-200';
     case 'view': return 'text-blue-500 bg-blue-50 border-blue-200';
     case 'create': return 'text-green-500 bg-green-50 border-green-200';
     case 'edit': return 'text-amber-500 bg-amber-50 border-amber-200';
     case 'delete': return 'text-red-500 bg-red-50 border-red-200';
     case 'export': return 'text-purple-500 bg-purple-50 border-purple-200';
+    case 'download': return 'text-green-500 bg-green-50 border-green-200';
     default: return 'text-gray-500 bg-gray-50 border-gray-200';
   }
 };
@@ -146,14 +148,14 @@ const AddEmployeeAccess = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
-  
+
   // Employee login credentials (these will be sent as adminEmail and adminPanelPassword in the API)
   const [employeeCredentials, setEmployeeCredentials] = useState({
     email: '',        // This will be sent as adminEmail in the API
     password: '',     // This will be sent as adminPanelPassword in the API
     confirmPassword: ''
   });
-  
+
   const [showCredentials, setShowCredentials] = useState(false);
   const [permissions, setPermissions] = useState({
     modulePermissions: [],
@@ -247,13 +249,13 @@ const AddEmployeeAccess = () => {
     }
 
     setSubmitting(true);
-    
+
     // Build module permissions in the required format
     const modulePermissions = menuItems.map(menuItem => {
       const modulePerm = permissions.modulePermissions.find(
         p => p.component === menuItem.id
       );
-      
+
       return {
         component: menuItem.id,
         items: menuItem.items.map(item => ({
@@ -329,9 +331,9 @@ const AddEmployeeAccess = () => {
       const existingModule = prev.modulePermissions.find(
         p => p.component === moduleId
       );
-      
+
       let updatedModulePermissions;
-      
+
       if (existingModule) {
         // Find the item and toggle the specific permission
         const updatedItems = existingModule.items.map(item => {
@@ -348,7 +350,7 @@ const AddEmployeeAccess = () => {
           }
           return item;
         });
-        
+
         updatedModulePermissions = prev.modulePermissions.map(p =>
           p.component === moduleId ? { ...p, items: updatedItems } : p
         );
@@ -361,7 +363,7 @@ const AddEmployeeAccess = () => {
         }));
         updatedModulePermissions = [...prev.modulePermissions, { component: moduleId, items }];
       }
-      
+
       return { ...prev, modulePermissions: updatedModulePermissions };
     });
   };
@@ -372,11 +374,11 @@ const AddEmployeeAccess = () => {
       const existingModule = prev.modulePermissions.find(
         p => p.component === moduleId
       );
-      
+
       let updatedModulePermissions;
       const menuItem = menuItems.find(m => m.id === moduleId);
       const itemConfig = menuItem?.items.find(i => i.name === itemName);
-      
+
       if (existingModule) {
         const updatedItems = existingModule.items.map(item => {
           if (item.name === itemName) {
@@ -384,15 +386,15 @@ const AddEmployeeAccess = () => {
             const allPermissions = itemConfig?.permission || [];
             const currentPermissions = item.permission || [];
             const allSelected = allPermissions.every(p => currentPermissions.includes(p));
-            
-            return { 
-              ...item, 
-              permission: allSelected ? [] : [...allPermissions] 
+
+            return {
+              ...item,
+              permission: allSelected ? [] : [...allPermissions]
             };
           }
           return item;
         });
-        
+
         updatedModulePermissions = prev.modulePermissions.map(p =>
           p.component === moduleId ? { ...p, items: updatedItems } : p
         );
@@ -404,7 +406,7 @@ const AddEmployeeAccess = () => {
         }));
         updatedModulePermissions = [...prev.modulePermissions, { component: moduleId, items }];
       }
-      
+
       return { ...prev, modulePermissions: updatedModulePermissions };
     });
   };
@@ -442,10 +444,10 @@ const AddEmployeeAccess = () => {
       const existingModule = prev.modulePermissions.find(
         p => p.component === moduleId
       );
-      
+
       let updatedModulePermissions;
       const menuItem = menuItems.find(m => m.id === moduleId);
-      
+
       if (existingModule) {
         // Check if all items have all their permissions
         let allFullyEnabled = true;
@@ -455,13 +457,13 @@ const AddEmployeeAccess = () => {
             allFullyEnabled = false;
           }
         });
-        
+
         // If all fully enabled, disable all; otherwise enable all with all permissions
         const newItems = menuItem.items.map(itemConfig => ({
           name: itemConfig.name,
           permission: allFullyEnabled ? [] : [...itemConfig.permission]
         }));
-        
+
         updatedModulePermissions = prev.modulePermissions.map(p =>
           p.component === moduleId ? { ...p, items: newItems } : p
         );
@@ -473,7 +475,7 @@ const AddEmployeeAccess = () => {
         }));
         updatedModulePermissions = [...prev.modulePermissions, { component: moduleId, items }];
       }
-      
+
       return { ...prev, modulePermissions: updatedModulePermissions };
     });
   };
@@ -501,7 +503,7 @@ const AddEmployeeAccess = () => {
     setPermissions((prev) => {
       const isSelected = prev.allowedProjects.some((p) => p.projectId === projectId);
       let updatedProjects;
-      
+
       if (isSelected) {
         updatedProjects = prev.allowedProjects.filter((p) => p.projectId !== projectId);
       } else {
@@ -510,7 +512,7 @@ const AddEmployeeAccess = () => {
           { projectId, accessLevel: "view" },
         ];
       }
-      
+
       return { ...prev, allowedProjects: updatedProjects };
     });
   };
@@ -683,13 +685,13 @@ const AddEmployeeAccess = () => {
                     These credentials will be used by employee to login
                   </div>
                 </div>
-                
+
                 {/* Info Box */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-start gap-2">
                   <MdInfo className="text-blue-500 mt-0.5 shrink-0" size={16} />
                   <p className="text-xs text-blue-700">
-                    <strong>Note:</strong> The email and password you set here will be the employee's login credentials 
-                    for accessing the system. These will be sent as <code className="bg-blue-100 px-1 py-0.5 rounded">adminEmail</code> and 
+                    <strong>Note:</strong> The email and password you set here will be the employee's login credentials
+                    for accessing the system. These will be sent as <code className="bg-blue-100 px-1 py-0.5 rounded">adminEmail</code> and
                     <code className="bg-blue-100 px-1 py-0.5 rounded">adminPanelPassword</code> in the API request.
                   </p>
                 </div>
@@ -756,13 +758,12 @@ const AddEmployeeAccess = () => {
                         value={employeeCredentials.confirmPassword}
                         onChange={(e) => setEmployeeCredentials(prev => ({ ...prev, confirmPassword: e.target.value }))}
                         placeholder="Confirm password"
-                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border-2 transition-all duration-200 text-sm text-gray-700 bg-white outline-none ${
-                          employeeCredentials.confirmPassword && employeeCredentials.password !== employeeCredentials.confirmPassword
+                        className={`w-full pl-10 pr-4 py-2.5 rounded-xl border-2 transition-all duration-200 text-sm text-gray-700 bg-white outline-none ${employeeCredentials.confirmPassword && employeeCredentials.password !== employeeCredentials.confirmPassword
                             ? 'border-red-400 focus:ring-red-100'
                             : employeeCredentials.confirmPassword && employeeCredentials.password === employeeCredentials.confirmPassword
-                            ? 'border-green-400 focus:ring-green-100'
-                            : 'border-gray-200 focus:border-teal-400 focus:ring-teal-100'
-                        }`}
+                              ? 'border-green-400 focus:ring-green-100'
+                              : 'border-gray-200 focus:border-teal-400 focus:ring-teal-100'
+                          }`}
                         required
                       />
                       {employeeCredentials.confirmPassword && (
@@ -803,15 +804,14 @@ const AddEmployeeAccess = () => {
                     );
                     const isFullyEnabled = isModuleFullyEnabled(menuItem.id);
                     const isPartial = isModulePartiallyEnabled(menuItem.id);
-                    
+
                     return (
                       <div
                         key={menuItem.id}
-                        className={`border-2 rounded-xl p-4 transition-all duration-200 ${
-                          isActive 
-                            ? 'border-teal-400 bg-gradient-to-br from-teal-50/80 to-emerald-50/80 shadow-sm shadow-teal-100' 
+                        className={`border-2 rounded-xl p-4 transition-all duration-200 ${isActive
+                            ? 'border-teal-400 bg-gradient-to-br from-teal-50/80 to-emerald-50/80 shadow-sm shadow-teal-100'
                             : 'border-gray-200 hover:border-teal-200 hover:bg-gray-50'
-                        }`}
+                          }`}
                       >
                         <div
                           className="flex items-center justify-between cursor-pointer mb-3"
@@ -827,13 +827,12 @@ const AddEmployeeAccess = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             {isActive && (
-                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                                isFullyEnabled 
-                                  ? 'bg-teal-100 text-teal-700' 
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isFullyEnabled
+                                  ? 'bg-teal-100 text-teal-700'
                                   : isPartial
-                                  ? 'bg-amber-100 text-amber-700'
-                                  : 'bg-gray-100 text-gray-500'
-                              }`}>
+                                    ? 'bg-amber-100 text-amber-700'
+                                    : 'bg-gray-100 text-gray-500'
+                                }`}>
                                 {isFullyEnabled ? 'All' : isPartial ? 'Partial' : 'None'}
                               </span>
                             )}
@@ -849,18 +848,17 @@ const AddEmployeeAccess = () => {
                             const hasPerm = hasAnyPermission(menuItem.id, item.name);
                             const allPerms = hasAllPermissions(menuItem.id, item.name);
                             const availablePermissions = item.permission || [];
-                            
+
                             return (
                               <div
                                 key={item.name}
-                                className={`border rounded-lg p-2.5 transition-all duration-200 ${
-                                  hasPerm 
-                                    ? 'border-teal-200 bg-white/60' 
+                                className={`border rounded-lg p-2.5 transition-all duration-200 ${hasPerm
+                                    ? 'border-teal-200 bg-white/60'
                                     : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100'
-                                }`}
+                                  }`}
                               >
                                 <div className="flex items-center justify-between mb-1.5">
-                                  <div 
+                                  <div
                                     className="flex items-center gap-2 cursor-pointer flex-1"
                                     onClick={() => toggleAllPermissionsForItem(menuItem.id, item.name)}
                                   >
@@ -868,11 +866,10 @@ const AddEmployeeAccess = () => {
                                       {item.name}
                                     </span>
                                     {hasPerm && (
-                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                                        allPerms 
-                                          ? 'bg-teal-100 text-teal-700' 
+                                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${allPerms
+                                          ? 'bg-teal-100 text-teal-700'
                                           : 'bg-amber-100 text-amber-700'
-                                      }`}>
+                                        }`}>
                                         {allPerms ? 'All' : `${item.permission.length}/${availablePermissions.length}`}
                                       </span>
                                     )}
@@ -891,11 +888,10 @@ const AddEmployeeAccess = () => {
                                       <button
                                         key={permission}
                                         onClick={() => toggleItemPermission(menuItem.id, item.name, permission)}
-                                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all duration-200 ${
-                                          isEnabled
+                                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all duration-200 ${isEnabled
                                             ? `${getPermissionColor(permission)} shadow-sm`
                                             : 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200'
-                                        }`}
+                                          }`}
                                       >
                                         {getPermissionIcon(permission)}
                                         {getPermissionLabel(permission)}
@@ -925,11 +921,10 @@ const AddEmployeeAccess = () => {
                   </h3>
                   <button
                     onClick={toggleAllProjects}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                      permissions.isAllProjectsAllowed
+                    className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${permissions.isAllProjectsAllowed
                         ? "bg-gradient-to-r from-teal-600 to-teal-500 text-white shadow-md shadow-teal-500/30"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
+                      }`}
                   >
                     {permissions.isAllProjectsAllowed ? "All Projects ✓" : "Select Projects"}
                   </button>
@@ -949,11 +944,10 @@ const AddEmployeeAccess = () => {
                         return (
                           <div
                             key={project._id}
-                            className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all duration-200 ${
-                              isSelected
+                            className={`flex items-center gap-3 p-2.5 rounded-xl border transition-all duration-200 ${isSelected
                                 ? "border-teal-300 bg-gradient-to-r from-teal-50 to-emerald-50 shadow-sm"
                                 : "border-gray-200 bg-white hover:border-teal-200 hover:bg-gray-50"
-                            }`}
+                              }`}
                           >
                             <button
                               onClick={() => toggleProjectSelection(project._id)}
