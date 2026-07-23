@@ -178,17 +178,17 @@ const ALL_MENU_ITEMS = [
       // { path: '/invoices1', label: 'Advanced Invoice', icon: <MdDownload />, description: 'Pro format', access: 'view' },
     ],
   },
-  {
-    id: 'payslip',
-    label: 'Payroll',
-    icon: <MdAssignment />,
-    description: 'Salary processing',
-    moduleKey: 'payslip',
-    submenu: [
-      { path: '/create-payslip', label: 'Generate Payslip', icon: <MdAddCircleOutline />, description: 'Monthly payroll', access: 'manage' },
-      { path: '/payslips', label: 'Payslip History', icon: <MdListAlt />, description: 'View all', access: 'view' },
-    ],
-  },
+  // {
+  //   id: 'payslip',
+  //   label: 'Payroll',
+  //   icon: <MdAssignment />,
+  //   description: 'Salary processing',
+  //   moduleKey: 'payslip',
+  //   submenu: [
+  //     { path: '/create-payslip', label: 'Generate Payslip', icon: <MdAddCircleOutline />, description: 'Monthly payroll', access: 'manage' },
+  //     { path: '/payslips', label: 'Payslip History', icon: <MdListAlt />, description: 'View all', access: 'view' },
+  //   ],
+  // },
 ];
 
 // Bottom items are admin-only (there's no corresponding modulePermissions
