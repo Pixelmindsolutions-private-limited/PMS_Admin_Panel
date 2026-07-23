@@ -600,7 +600,7 @@ const ShowInvoices = () => {
 
       {/* PDF View Modal */}
       {showPdfModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-slate-200">
               <h3 className="text-lg font-bold text-slate-800">Invoice PDF</h3>
