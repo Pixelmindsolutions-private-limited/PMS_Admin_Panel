@@ -54,13 +54,20 @@ const Login = ({ onLogin }) => {
     if (!formData.email) return;
     setLoading(true);
     try {
-      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/auth/send-otp', {
+      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/adminpanel/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email }),
       });
       const data = await response.json();
+      
       if (!response.ok) throw new Error(data.message || 'Failed to send OTP. Please try again.');
+      
+      // Store adminId for later use if needed
+      if (data.data?.adminId) {
+        sessionStorage.setItem('adminId', data.data.adminId);
+      }
+      
       setShowOtpModal(true);
       setTimeout(() => { document.getElementById('otp-0')?.focus(); }, 100);
     } catch (err) {
@@ -73,11 +80,14 @@ const Login = ({ onLogin }) => {
   const handleOtpSubmit = async (e) => {
     e.preventDefault();
     const otpString = otp.join('');
-    if (otpString.length !== 6) { setOtpError('Please enter complete 6-digit OTP'); return; }
+    if (otpString.length !== 6) { 
+      setOtpError('Please enter complete 6-digit OTP'); 
+      return; 
+    }
     setOtpLoading(true);
     setOtpError('');
     try {
-      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/auth/verify-otp', {
+      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/adminpanel/verify-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, otp: otpString }),
@@ -86,12 +96,12 @@ const Login = ({ onLogin }) => {
 
       if (!response.ok) throw new Error(data.message || 'Invalid OTP. Please try again.');
       
-      // Save to sessionStorage
+      // Save to sessionStorage - using correct response structure
       sessionStorage.setItem('loginDetails', JSON.stringify({
         email: data.data.email,
-        name: "Admin",
-        role: "Admin",
-        id: data.data.id || null,
+        name: data.data.name || "Admin",
+        role: data.data.role || "admin",
+        id: data.data.adminId || null,
         adminName: data.data.name || null,
         token: data.data.token || null,
       }));
@@ -117,13 +127,17 @@ const Login = ({ onLogin }) => {
     setResendLoading(true);
     setOtpError('');
     try {
-      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/auth/send-otp', {
+      // Fixed: Use the same adminpanel endpoint as send-otp
+      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/adminpanel/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email }),
       });
       const data = await response.json();
+      
       if (!response.ok) throw new Error(data.message || 'Failed to resend OTP. Please try again.');
+      
+      // Clear OTP inputs
       setOtp(['', '', '', '', '', '']);
       setTimeout(() => { document.getElementById('otp-0')?.focus(); }, 100);
     } catch (err) {
