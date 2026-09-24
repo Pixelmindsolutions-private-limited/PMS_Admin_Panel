@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { MdEdit, MdArrowBack, MdDownload, MdPhone, MdEmail, MdLocationOn, MdPerson } from 'react-icons/md';
+import { MdEdit, MdArrowBack, MdDownload, MdPhone, MdEmail, MdLocationOn, MdPerson, MdCancel, MdCheckCircle } from 'react-icons/md';
 import { FaUsers, FaCalendarAlt, FaTag } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 
@@ -15,6 +15,8 @@ const SingleClient = () => {
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [toastMsg, setToastMsg] = useState(null);
 
   useEffect(() => {
     fetchClient();
@@ -27,7 +29,7 @@ const SingleClient = () => {
         headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
       });
       const data = await response.json();
-      
+
       if (data.success) {
         setClient(data.data);
       } else {
@@ -37,6 +39,39 @@ const SingleClient = () => {
       setError('Network error: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const showToast = (type, message) => {
+    setToastMsg({ type, message });
+    setTimeout(() => setToastMsg(null), 3000);
+  };
+
+  // Update lead status (Converted / Cancelled)
+  const handleStatusUpdate = async (status) => {
+    if (!client) return;
+    setStatusUpdating(true);
+    try {
+      const response = await fetch(`${API_URL}/${id}/status`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${AUTH_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ leadStatus: status }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        setClient(prev => ({ ...prev, leadStatus: status }));
+        showToast('success', `Client marked as ${status}`);
+      } else {
+        showToast('error', data.message || 'Failed to update status');
+      }
+    } catch (err) {
+      showToast('error', 'Network error while updating status');
+    } finally {
+      setStatusUpdating(false);
     }
   };
 
@@ -72,7 +107,7 @@ const SingleClient = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <style>{`@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
         <div className="flex flex-col items-center gap-3">
-          <div style={{ width:44,height:44,border:'3px solid #e0f2f1',borderTop:'3px solid #0d9488',borderRadius:'50%',animation:'spin .8s linear infinite' }} />
+          <div style={{ width: 44, height: 44, border: '3px solid #e0f2f1', borderTop: '3px solid #0d9488', borderRadius: '50%', animation: 'spin .8s linear infinite' }} />
           <p className="text-gray-500 text-sm font-medium">Loading client details…</p>
         </div>
       </div>
@@ -102,11 +137,22 @@ const SingleClient = () => {
         *, *::before, *::after { font-family:'Inter',-apple-system,sans-serif; box-sizing:border-box; }
         .info-card { transition:background .15s; }
         .info-card:hover { background:rgba(240,253,250,0.7); }
+        @keyframes slideDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
+        .toast-in { animation:slideDown .3s ease forwards; }
         @media print {
           .no-print { display:none!important; }
           body { background:white!important; }
         }
       `}</style>
+
+      {/* Toast */}
+      {toastMsg && (
+        <div className={`toast-in fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm max-w-sm no-print ${toastMsg.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+          <span>{toastMsg.type === 'success' ? '✓' : '!'}</span>
+          <span className="flex-1 text-sm">{toastMsg.message}</span>
+          <button onClick={() => setToastMsg(null)} className="opacity-80 hover:opacity-100 ml-1">✕</button>
+        </div>
+      )}
 
       <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         {/* Top Nav */}
@@ -115,20 +161,6 @@ const SingleClient = () => {
             className="flex items-center gap-2 text-gray-600 hover:text-teal-700 font-medium text-sm transition-colors self-start">
             <MdArrowBack size={18} /> Back to Clients
           </button>
-          {/* <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={exportToExcel}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-sm transition-all shadow-sm">
-              <MdDownload size={16} /> Export
-            </button>
-            <button onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-sm transition-all shadow-sm">
-              Print
-            </button>
-            <Link to={`/edit-client/${id}`}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700 font-semibold text-sm transition-all shadow-md">
-              <MdEdit size={16} /> Edit Client
-            </Link>
-          </div> */}
         </div>
 
         {/* Hero Banner */}
@@ -181,7 +213,7 @@ const SingleClient = () => {
 
         {/* Details Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Info */}
+          {/* Main Info (Left - 2 columns) */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-100">
@@ -195,42 +227,48 @@ const SingleClient = () => {
                 <InfoItem label="Address" value={client.address} icon="📍" className="sm:col-span-2" />
               </div>
             </div>
+          </div>
 
-            {/* Additional Info */}
+          {/* Sidebar (Right - 1 column) */}
+          <div className="space-y-6">
+            {/* Timestamps Card with Actions */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-100">
                 <FaCalendarAlt className="inline mr-2 text-teal-600" /> Timestamps
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <InfoItem label="Created At" value={formatDate(client.createdAt)} icon="🕐" />
                 <InfoItem label="Last Updated" value={formatDate(client.updatedAt)} icon="🔄" />
-                <InfoItem label="Client ID" value={client._id} icon="🆔" className="sm:col-span-2" />
+                <InfoItem label="Client ID" value={client._id} icon="🆔" />
+              </div>
+
+              {/* Lead Actions inside Timestamps card */}
+              {/* Lead Actions inside Timestamps card */}
+              <div className="mt-6 pt-4 border-t border-gray-100">
+
+                {client.leadStatus && (
+                  <p className="text-xs text-gray-500 mb-3 text-center">
+                    Current status: <span className="font-semibold text-gray-700">{client.leadStatus}</span>
+                  </p>
+                )}
+                <div className="flex items-center justify-center gap-3">
+
+                  <button
+                    onClick={() => handleStatusUpdate('Cancelled')}
+                    disabled={statusUpdating}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <MdCancel size={16} /> Cancel
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate('Converted')}
+                    disabled={statusUpdating}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <MdCheckCircle size={16} /> Convert
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* Sidebar */}
-          {/* <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-100">
-                <FaUsers className="inline mr-2 text-teal-600" /> Quick Actions
-              </h2>
-              <div className="space-y-3">
-                <Link to={`/edit-client/${id}`}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold text-sm transition-colors">
-                  <MdEdit size={18} /> Edit Client
-                </Link>
-                <button onClick={exportToExcel}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-colors">
-                  <MdDownload size={18} /> Export Details
-                </button>
-                <button onClick={() => window.print()}
-                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-xl font-semibold text-sm transition-colors">
-                  Print Details
-                </button>
-              </div>
-            </div>
-          </div> */}
         </div>
       </div>
     </div>

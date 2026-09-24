@@ -22,6 +22,47 @@ const headers = () => ({
   'Content-Type': 'application/json',
 });
 
+// Fixed palette for known lead types (matches design reference), with a
+// deterministic fallback (hash-based) for any other/unknown lead source.
+const LEAD_BADGE_STYLES = {
+  'socialmedia': 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  'social media': 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  'mobile application': 'bg-sky-50 text-sky-700 border border-sky-200',
+  'referral': 'bg-amber-50 text-amber-700 border border-amber-200',
+  'web development': 'bg-violet-50 text-violet-700 border border-violet-200',
+  'digital marketing': 'bg-pink-50 text-pink-700 border border-pink-200',
+  'erp solutions': 'bg-blue-50 text-blue-700 border border-blue-200',
+  'app development': 'bg-teal-50 text-teal-700 border border-teal-200',
+};
+
+const FALLBACK_BADGE_STYLES = [
+  'bg-emerald-50 text-emerald-700 border border-emerald-200',
+  'bg-sky-50 text-sky-700 border border-sky-200',
+  'bg-amber-50 text-amber-700 border border-amber-200',
+  'bg-violet-50 text-violet-700 border border-violet-200',
+  'bg-pink-50 text-pink-700 border border-pink-200',
+  'bg-blue-50 text-blue-700 border border-blue-200',
+  'bg-teal-50 text-teal-700 border border-teal-200',
+  'bg-orange-50 text-orange-700 border border-orange-200',
+  'bg-rose-50 text-rose-700 border border-rose-200',
+  'bg-indigo-50 text-indigo-700 border border-indigo-200',
+];
+
+const getLeadBadgeClass = (leadRaw) => {
+  if (!leadRaw) return 'bg-gray-50 text-gray-600 border border-gray-200';
+  // Match on the part before any "(" so "Referral (Prasad)" -> "referral"
+  const key = leadRaw.toString().split('(')[0].trim().toLowerCase();
+  if (LEAD_BADGE_STYLES[key]) return LEAD_BADGE_STYLES[key];
+
+  // Deterministic fallback so the same unknown lead type always gets the
+  // same color across renders/sessions.
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  }
+  return FALLBACK_BADGE_STYLES[hash % FALLBACK_BADGE_STYLES.length];
+};
+
 const AllClients = () => {
   const navigate = useNavigate();
 
@@ -88,6 +129,24 @@ const AllClients = () => {
       setDeleteId(null);
     }
   };
+
+  // Lead status counts (Running / Converted / Cancelled)
+  const leadStats = useMemo(() => {
+    const getStatus = (c) =>
+      (c.leadStatus || c.status || c.lead || "").toString().trim().toLowerCase();
+
+    const running = clients.filter(
+      (c) => getStatus(c) === "running"
+    ).length;
+    const converted = clients.filter(
+      (c) => getStatus(c) === "converted"
+    ).length;
+    const cancelled = clients.filter(
+      (c) => getStatus(c) === "cancelled" || getStatus(c) === "canceled"
+    ).length;
+
+    return { running, converted, cancelled };
+  }, [clients]);
 
   // Filter clients
   const filtered = useMemo(() => {
@@ -209,20 +268,18 @@ const AllClients = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           {[
-            { label: 'Total Clients', value: clients.length, icon: '👥', color: 'teal' },
-            { label: 'With Email', value: clients.filter(c => c.email).length, icon: '📧', color: 'blue' },
-            { label: 'With Phone', value: clients.filter(c => c.mobile).length, icon: '📱', color: 'emerald' },
-            { label: 'With Address', value: clients.filter(c => c.address).length, icon: '📍', color: 'purple' },
+            { label: 'Running', value: leadStats.running, icon: '🔄', color: 'amber' },
+            { label: 'Converted', value: leadStats.converted, icon: '✅', color: 'green' },
+            { label: 'Cancelled', value: leadStats.cancelled, icon: '❌', color: 'red' },
           ].map((s, i) => (
             <div key={i} className="stat-card rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-2xl">{s.icon}</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.color === 'teal' ? 'bg-teal-100 text-teal-700' :
-                  s.color === 'blue' ? 'bg-blue-100 text-blue-700' :
-                    s.color === 'emerald' ? 'bg-emerald-100 text-emerald-700' :
-                      'bg-purple-100 text-purple-700'}`}>{s.label}</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${s.color === 'amber' ? 'bg-amber-100 text-amber-700' :
+                  s.color === 'green' ? 'bg-green-100 text-green-700' :
+                    'bg-red-100 text-red-700'}`}>{s.label}</span>
               </div>
               <p className="text-3xl font-bold text-gray-800">{s.value}</p>
             </div>
@@ -285,39 +342,17 @@ const AllClients = () => {
         {!loading && !error && (
           <div className="fade-up">
             {paginated.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {paginated.map((client) => (
                   <div key={client._id} className="client-card bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                    <div className="p-5">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-teal-500/20">
-                          {client.name?.charAt(0).toUpperCase() || '?'}
-                        </div>
-                        <div className="flex gap-1">
-                          {(loginDetails?.role === "Admin" || access.includes("view")) && (
-                            <button onClick={() => navigate(`/client/${client._id}`)}
-                              className="p-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-600 transition-all" title="View">
-                              <MdVisibility size={16} />
-                            </button>
-                          )}
-                          {(loginDetails?.role === "Admin" || access.includes("edit")) && (
-                            <button onClick={() => navigate(`/edit-client/${client._id}`)}
-                              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition-all" title="Edit">
-                              <MdEdit size={16} />
-                            </button>
-                          )}
-                          {(loginDetails?.role === "Admin" || access.includes("delete")) && (
-                            <button onClick={() => setDeleteId(client._id)}
-                              className="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition-all" title="Delete">
-                              <MdDelete size={16} />
-                            </button>
-                          )}
-                        </div>
+                    <div className="p-4">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-teal-500/20 mb-2.5">
+                        {client.name?.charAt(0).toUpperCase() || '?'}
                       </div>
 
                       <h3 className="font-bold text-gray-800 text-base truncate">{client.name}</h3>
 
-                      <div className="mt-3 space-y-1.5">
+                      <div className="mt-2 space-y-1">
                         {client.mobile && (
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <FaPhone size={12} className="text-teal-500" />
@@ -339,12 +374,28 @@ const AllClients = () => {
                       </div>
 
                       {client.lead && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        <div className="mt-2.5 pt-2.5 border-t border-gray-100">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${getLeadBadgeClass(client.lead)}`}>
                             {client.lead}
                           </span>
                         </div>
                       )}
+                    </div>
+
+                    {/* Bottom action bar - View / Edit / Delete (always visible) */}
+                    <div className="flex items-stretch gap-2 px-4 pb-4">
+                      <button onClick={() => navigate(`/client/${client._id}`)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 font-semibold text-xs transition-all">
+                        <MdVisibility size={14} /> View
+                      </button>
+                      <button onClick={() => navigate(`/edit-client/${client._id}`)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs transition-all">
+                        <MdEdit size={14} /> Edit
+                      </button>
+                      <button onClick={() => setDeleteId(client._id)}
+                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs transition-all">
+                        <MdDelete size={14} /> Delete
+                      </button>
                     </div>
                   </div>
                 ))}

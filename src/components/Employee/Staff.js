@@ -36,6 +36,12 @@ const permission = loginDetails?.modulePermissions?.find(
 
 const access = permission?.items?.[0]?.permission || [];
 
+// Helper — case-insensitive admin check + safe permission lookup
+const isAdmin = (loginDetails?.role || "").toLowerCase() === "admin";
+
+const can = (action) =>
+  isAdmin || (Array.isArray(access) && access.includes(action));
+
 const Staff = () => {
   const navigate = useNavigate();
   const [staffList, setStaffList] = useState([]);
@@ -96,7 +102,16 @@ const Staff = () => {
     const active = staffList.filter((s) => s.isActive).length;
     const inactive = total - active;
     const uniqueRoles = [...new Set(staffList.map((s) => s.role))].length;
-    return { total, active, inactive, uniqueRoles };
+
+    // Gender counts (case-insensitive, trims whitespace)
+    const male = staffList.filter(
+      (s) => (s.gender || "").trim().toLowerCase() === "male"
+    ).length;
+    const female = staffList.filter(
+      (s) => (s.gender || "").trim().toLowerCase() === "female"
+    ).length;
+
+    return { total, active, inactive, uniqueRoles, male, female };
   }, [staffList]);
 
   // Filter staff based on search, role, and status
@@ -295,7 +310,7 @@ const Staff = () => {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            {(loginDetails?.role === "Admin" || access.includes("export")) && (
+            {can("export") && (
               <button
                 onClick={handleExport}
                 className="group flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm w-full sm:w-auto"
@@ -308,7 +323,7 @@ const Staff = () => {
               </button>
             )}
 
-            {(loginDetails?.role === "Admin" || access.includes("add")) && (
+            {can("add") && (
               <Link
                 to="/add-staff"
                 className="group flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-sm w-full sm:w-auto"
@@ -324,18 +339,20 @@ const Staff = () => {
         </div>
 
         {/* STAT CARDS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 lg:gap-4 mb-5 sm:mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 lg:gap-4 mb-5 sm:mb-6">
           {[
-            { label: "Total Staff", value: stats.total, icon: "👥", badge: "bg-teal-100 text-teal-700", dot: "bg-teal-400" },
-            { label: "Active", value: stats.active, icon: "✅", badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-400" },
-            { label: "Inactive", value: stats.inactive, icon: "⏸️", badge: "bg-gray-100 text-gray-500", dot: "bg-gray-300" },
-            { label: "Unique Roles", value: stats.uniqueRoles, icon: "🏷️", badge: "bg-blue-100 text-blue-700", dot: "bg-blue-400" },
+            { label: "Total Staff", value: stats.total, icon: "👥", badge: "bg-teal-100 text-teal-700", dot: "bg-teal-400", short: "Total" },
+            { label: "Active", value: stats.active, icon: "✅", badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-400", short: "Active" },
+            { label: "Inactive", value: stats.inactive, icon: "⏸️", badge: "bg-gray-100 text-gray-500", dot: "bg-gray-300", short: "Inactive" },
+            { label: "Male Staff", value: stats.male, icon: "👨", badge: "bg-blue-100 text-blue-700", dot: "bg-blue-400", short: "Male" },
+            { label: "Female Staff", value: stats.female, icon: "👩", badge: "bg-pink-100 text-pink-700", dot: "bg-pink-400", short: "Female" },
+            { label: "Unique Roles", value: stats.uniqueRoles, icon: "🏷️", badge: "bg-purple-100 text-purple-700", dot: "bg-purple-400", short: "Unique" },
           ].map((s, i) => (
             <div key={i} className="stat-card rounded-2xl p-3 sm:p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-lg sm:text-2xl">{s.icon}</span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded-full hidden sm:inline ${s.badge}`}>
-                  {s.label.split(" ")[0]}
+                  {s.short}
                 </span>
               </div>
               <p className="text-xl sm:text-3xl font-bold text-gray-800 leading-none">{s.value}</p>
@@ -514,13 +531,13 @@ const Staff = () => {
                       </td>
                       <td className="py-3 px-3 sm:px-4">
                         <div className="flex items-center gap-1">
-                          {(loginDetails?.role === "Admin" || access.includes("view")) && (
+                          {can("view") && (
                             <button onClick={() => navigate(`/staff/${staff.employeeId}`)}
                               className="btn-act bg-teal-50 hover:bg-teal-100 text-teal-600" title="View">
                               <MdRemoveRedEye size={15} />
                             </button>
                           )}
-                          {(loginDetails?.role === "Admin" || access.includes("edit")) && (
+                          {can("edit") && (
                             <button
                               onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}
                               className="btn-act bg-blue-50 hover:bg-blue-100 text-blue-600"
@@ -529,7 +546,7 @@ const Staff = () => {
                               <MdEdit size={15} />
                             </button>
                           )}
-                          {(loginDetails?.role === "Admin" || access.includes("delete")) && (
+                          {can("delete") && (
                             <button onClick={() => setDeleteConfirm({ id: staff.employeeId, name: staff.employeeName })}
                               className="btn-act bg-red-50 hover:bg-red-100 text-red-500" title="Delete">
                               <MdDelete size={15} />
@@ -620,26 +637,39 @@ const Staff = () => {
                     </div>
                   </div>
 
-                  <div className="flex gap-1.5 mt-3">
-                    {(loginDetails?.role === "Admin" || access.includes("view")) && (
-                      <button onClick={() => navigate(`/staff/${staff.employeeId}`)}
-                        className="btn-act flex-1 w-auto h-8 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-600">
+                  {/* Action buttons — always visible with icon + text */}
+                  <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-gray-100">
+                    {can("view") && (
+                      <button
+                        onClick={() => navigate(`/staff/${staff.employeeId}`)}
+                        className="flex-1 flex items-center justify-center gap-1 h-8 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-semibold transition-colors"
+                        title="View"
+                      >
                         <MdRemoveRedEye size={14} />
+                        <span className="hidden sm:inline">View</span>
                       </button>
                     )}
-                    {(loginDetails?.role === "Admin" || access.includes("edit")) && (
-                    <button
-                      onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}
-                      className="btn-act flex-1 w-auto h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
-                    >
-                      <MdEdit size={14} />
-                    </button>
+
+                    {can("edit") && (
+                      <button
+                        onClick={() => navigate(`/staff/edit/${staff.employeeId}`)}
+                        className="flex-1 flex items-center justify-center gap-1 h-8 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors"
+                        title="Edit"
+                      >
+                        <MdEdit size={14} />
+                        <span className="hidden sm:inline">Edit</span>
+                      </button>
                     )}
-                    {(loginDetails?.role === "Admin" || access.includes("delete")) && (
-                    <button onClick={() => setDeleteConfirm({ id: staff.employeeId, name: staff.employeeName })}
-                      className="btn-act flex-1 w-auto h-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-500">
-                      <MdDelete size={14} />
-                    </button>
+
+                    {can("delete") && (
+                      <button
+                        onClick={() => setDeleteConfirm({ id: staff.employeeId, name: staff.employeeName })}
+                        className="flex-1 flex items-center justify-center gap-1 h-8 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors"
+                        title="Delete"
+                      >
+                        <MdDelete size={14} />
+                        <span className="hidden sm:inline">Delete</span>
+                      </button>
                     )}
                   </div>
                 </div>

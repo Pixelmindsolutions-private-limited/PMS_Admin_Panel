@@ -102,7 +102,7 @@ const ALL_MENU_ITEMS = [
   },
   {
     id: 'clients',
-    label: 'Clients',
+    label: 'Leads',
     icon: <MdFolder />,
     description: 'Leads',
     moduleKey: 'clients',
