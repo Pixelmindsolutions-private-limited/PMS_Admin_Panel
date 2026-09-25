@@ -31,7 +31,8 @@ const SingleClient = () => {
       const data = await response.json();
 
       if (data.success) {
-        setClient(data.data);
+        const clientData = data.data ? { ...data.data, leadStatus: normalizeLeadStatus(data.data.leadStatus || data.data.status || data.data.lead) } : data.data;
+        setClient(clientData);
       } else {
         setError(data.message || 'Failed to load client details');
       }
@@ -42,6 +43,20 @@ const SingleClient = () => {
     }
   };
 
+  const normalizeLeadStatus = (value) => {
+    const raw = value === undefined || value === null ? '' : String(value).trim();
+    if (!raw) return 'Running';
+
+    const normalized = raw.toLowerCase();
+    if (['converted', 'conversion', 'converted lead', 'won', 'closed won'].includes(normalized)) {
+      return 'Converted';
+    }
+    if (['cancelled', 'canceled', 'cancel', 'rejected', 'lost', 'closed lost'].includes(normalized)) {
+      return 'Cancelled';
+    }
+    return 'Running';
+  };
+
   const showToast = (type, message) => {
     setToastMsg({ type, message });
     setTimeout(() => setToastMsg(null), 3000);
@@ -50,6 +65,7 @@ const SingleClient = () => {
   // Update lead status (Converted / Cancelled)
   const handleStatusUpdate = async (status) => {
     if (!client) return;
+    const nextStatus = normalizeLeadStatus(status);
     setStatusUpdating(true);
     try {
       const response = await fetch(`${API_URL}/${id}/status`, {
@@ -58,13 +74,14 @@ const SingleClient = () => {
           Authorization: `Bearer ${AUTH_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ leadStatus: status }),
+        body: JSON.stringify({ leadStatus: nextStatus }),
       });
       const data = await response.json();
 
       if (data.success) {
-        setClient(prev => ({ ...prev, leadStatus: status }));
-        showToast('success', `Client marked as ${status}`);
+        const updatedStatus = normalizeLeadStatus(data.data?.leadStatus || nextStatus);
+        setClient(prev => ({ ...prev, leadStatus: updatedStatus }));
+        showToast('success', `Client marked as ${updatedStatus}`);
       } else {
         showToast('error', data.message || 'Failed to update status');
       }

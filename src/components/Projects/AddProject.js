@@ -52,7 +52,9 @@ const AddProject = () => {
   const [marketingWorkDays, setMarketingWorkDays] = useState("");
 
   const [formData, setFormData] = useState({
-    clientId: "",
+    clientName: "",
+    mobileNumber: "",
+    mailId: "",
     projectName: "",
     projectStartDate: "",
     projectEndDate: "",
@@ -179,11 +181,19 @@ const AddProject = () => {
     let error = "";
 
     switch (name) {
-      case "clientId":
-        if (!value) error = "Please select a client";
+      case "clientName":
+        if (!value?.trim()) error = "Client name is required";
+        break;
+      case "mobileNumber":
+        if (!value?.trim()) error = "Mobile number is required";
+        else if (!/^\d{10}$/.test(value.trim())) error = "Mobile number must be 10 digits";
+        break;
+      case "mailId":
+        if (!value?.trim()) error = "Mail ID is required";
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) error = "Enter a valid email";
         break;
       case "projectName":
-        if (!value.trim()) error = "Project name is required";
+        if (!value?.trim()) error = "Project name is required";
         else if (value.trim().length < 3) error = "Project name must be at least 3 characters";
         break;
       case "projectStartDate":
@@ -222,7 +232,7 @@ const AddProject = () => {
 
   const validateForm = () => {
     const newErrors = {};
-    const fields = ['clientId', 'projectName', 'projectStartDate', 'projectEndDate', 'deadline', 'projectCost', 'paymentMilestone'];
+    const fields = ['clientName', 'mobileNumber', 'mailId', 'projectName', 'projectStartDate', 'projectEndDate', 'deadline', 'projectCost', 'paymentMilestone'];
     fields.forEach(field => {
       newErrors[field] = validateField(field, formData[field]);
     });
@@ -244,17 +254,6 @@ const AddProject = () => {
     if (touched[name]) {
       const error = validateField(name, value);
       setErrors(prev => ({ ...prev, [name]: error }));
-    }
-  };
-
-  const handleClientSelect = (e) => {
-    const clientId = e.target.value;
-    setFormData({ ...formData, clientId });
-    const client = clients.find(c => c._id === clientId);
-    setSelectedClient(client);
-    if (touched.clientId) {
-      const error = validateField("clientId", clientId);
-      setErrors(prev => ({ ...prev, clientId: error }));
     }
   };
 
@@ -387,7 +386,7 @@ const AddProject = () => {
   };
 
   const handleNextToPhases = () => {
-    const allFields = ['clientId', 'projectName', 'projectStartDate', 'projectEndDate', 'deadline', 'projectCost', 'paymentMilestone'];
+    const allFields = ['clientName', 'mobileNumber', 'mailId', 'projectName', 'projectStartDate', 'projectEndDate', 'deadline', 'projectCost', 'paymentMilestone'];
     const touchedFields = {};
     allFields.forEach(field => { touchedFields[field] = true; });
     setTouched(touchedFields);
@@ -411,7 +410,7 @@ const AddProject = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const allFields = ['clientId', 'projectName', 'projectStartDate', 'projectEndDate', 'deadline', 'projectCost', 'paymentMilestone'];
+    const allFields = ['clientName', 'mobileNumber', 'mailId', 'projectName', 'projectStartDate', 'projectEndDate', 'deadline', 'projectCost', 'paymentMilestone'];
     const touchedFields = {};
     allFields.forEach(field => { touchedFields[field] = true; });
     setTouched(touchedFields);
@@ -481,7 +480,9 @@ const AddProject = () => {
 
     try {
       const payload = {
-        clientId: formData.clientId,
+        clientName: formData.clientName.trim(),
+        mobileNumber: formData.mobileNumber.trim(),
+        mailId: formData.mailId.trim(),
         projectName: formData.projectName.trim(),
         projectCost: Number(formData.projectCost),
         projectStartDate: formData.projectStartDate,
@@ -660,29 +661,6 @@ const AddProject = () => {
                 ═══════════════════════════════════════════════════ */}
             {currentStep === 1 && (
               <>
-                {/* Client Selector — only the dropdown, no heading */}
-                {/* <select
-                  name="clientId"
-                  value={formData.clientId}
-                  onChange={handleClientSelect}
-                  onBlur={() => handleBlur("clientId")}
-                  className={`w-full h-11 px-4 rounded-xl text-sm text-gray-700 bg-white border-2 ${
-                    errors.clientId && touched.clientId ? 'border-red-400 focus:border-red-500' : 'border-teal-200/50 focus:border-teal-500'
-                  } focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all`}
-                  disabled={clientsLoading}
-                >
-                  <option value="">{clientsLoading ? "Loading clients..." : "Select a client"}</option>
-                  {clients.map((client) => (
-                    <option key={client._id} value={client._id}>
-                      {client.name} - {client.mobile}
-                    </option>
-                  ))}
-                </select> */}
-                {touched.clientId && errors.clientId && (
-                  <p className="text-xs text-red-500 -mt-5">{errors.clientId}</p>
-                )}
-
-                {/* Project Details — all fields from the handwritten note */}
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
@@ -691,7 +669,41 @@ const AddProject = () => {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Project Name */}
+                    <InputField
+                      name="clientName"
+                      label="Client Name"
+                      placeholder="Enter client name"
+                      value={formData.clientName}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur("clientName")}
+                      error={touched.clientName && errors.clientName}
+                      required
+                    />
+
+                    <InputField
+                      name="mobileNumber"
+                      label="Mobile Number"
+                      type="tel"
+                      placeholder="Enter 10-digit mobile number"
+                      value={formData.mobileNumber}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur("mobileNumber")}
+                      error={touched.mobileNumber && errors.mobileNumber}
+                      required
+                    />
+
+                    <InputField
+                      name="mailId"
+                      label="Mail ID"
+                      type="email"
+                      placeholder="Enter email address"
+                      value={formData.mailId}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur("mailId")}
+                      error={touched.mailId && errors.mailId}
+                      required
+                    />
+
                     <InputField
                       name="projectName"
                       label="Project Name"
@@ -701,33 +713,6 @@ const AddProject = () => {
                       onBlur={() => handleBlur("projectName")}
                       error={touched.projectName && errors.projectName}
                       required
-                    />
-
-                    {/* Client Name — auto-filled, read-only */}
-                    <InputField
-                      name="clientName"
-                      label="Client Name"
-                      placeholder="Select a client to auto-fill"
-                      value={selectedClient?.name || ""}
-                      readOnly
-                    />
-
-                    {/* Mobile Number — auto-filled, read-only */}
-                    <InputField
-                      name="mobileNumber"
-                      label="Mobile Number"
-                      placeholder="Select a client to auto-fill"
-                      value={selectedClient?.mobile || ""}
-                      readOnly
-                    />
-
-                    {/* Mail ID — auto-filled, read-only */}
-                    <InputField
-                      name="mailId"
-                      label="Mail ID"
-                      placeholder="Select a client to auto-fill"
-                      value={selectedClient?.email || ""}
-                      readOnly
                     />
 
                     {/* Project Starts */}

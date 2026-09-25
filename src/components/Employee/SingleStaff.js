@@ -347,6 +347,11 @@ const StaffDetails = () => {
                   value={staff.role}
                 />
                 <InfoCard
+                  icon={<MdPerson className="text-pink-500" />}
+                  label="Gender"
+                  value={staff.gender || "Not specified"}
+                />
+                <InfoCard
                   icon={<MdBloodtype className="text-red-500" />}
                   label="Blood Group"
                   value={staff.bloodGroup || "Not specified"}

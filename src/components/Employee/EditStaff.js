@@ -60,6 +60,7 @@ const EditStaff = () => {
 
   const [roles, setRoles] = useState(DEFAULT_ROLES);
   const [bloodGroups, setBloodGroups] = useState(DEFAULT_BLOOD_GROUPS);
+  const [genders, setGenders] = useState(["Male", "Female"]);
 
   // Documents state
   const [documents, setDocuments] = useState([]);
@@ -121,6 +122,7 @@ const EditStaff = () => {
       if (response.ok && data.success) {
         if (data.roles && data.roles.length > 0) setRoles(data.roles);
         if (data.bloodGroups && data.bloodGroups.length > 0) setBloodGroups(data.bloodGroups);
+        if (data.genders && data.genders.length > 0) setGenders(data.genders);
       }
     } catch (error) {
       console.error("Metadata fetch error:", error);
@@ -169,7 +171,7 @@ const EditStaff = () => {
 
   const fetchDocuments = async (employeeId) => {
     try {
-      const res = await fetch(`${API_URL}/documents/${employeeId}`, {
+      const res = await fetch(`${API_URL}/documents/employee/${employeeId}`, {
         headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
       });
       const data = await res.json();
@@ -535,7 +537,7 @@ const EditStaff = () => {
               />
               <SelectField icon={<Briefcase size={14} />} label="Role" name="role" value={formData.role} onChange={handleChange} options={roles} required />
               <InputField icon={<Calendar size={14} />} label="Joining Date" name="joiningDate" type="date" value={formData.joiningDate} onChange={handleChange} />
-              <SelectField icon={<User size={14} />} label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={["Male", "Female"]} />
+              <SelectField icon={<User size={14} />} label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={genders} />
               <SelectField icon={<Droplet size={14} />} label="Blood Group" name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} options={bloodGroups} />
               <InputField icon={<Lock size={14} />} label="New Password" name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Leave blank to keep current" />
             </div>

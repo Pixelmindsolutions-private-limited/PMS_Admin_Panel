@@ -85,6 +85,7 @@ const AddStaff = () => {
   // Data from backend - no fallbacks
   const [roles, setRoles] = useState([]);
   const [bloodGroups, setBloodGroups] = useState([]);
+  const [genders, setGenders] = useState(["Male", "Female"]);
   const [loadingData, setLoadingData] = useState(true);
   const [apiError, setApiError] = useState(false);
 
@@ -143,6 +144,14 @@ const AddStaff = () => {
           if (selectedDate > today) {
             error = "Joining date cannot be in the future";
           }
+        }
+        break;
+
+      case "gender":
+        if (!value) {
+          error = "Gender is required";
+        } else if (!genders.includes(value)) {
+          error = "Invalid gender selected";
         }
         break;
 
@@ -221,6 +230,7 @@ const AddStaff = () => {
     newErrors.mobile = validateField("mobile", formData.mobile);
     newErrors.email = validateField("email", formData.email);
     newErrors.joiningDate = validateField("joiningDate", formData.joiningDate);
+    newErrors.gender = validateField("gender", formData.gender);
     newErrors.password = validateField("password", formData.password);
     newErrors.confirmPassword = validateField("confirmPassword", formData.confirmPassword);
 
@@ -257,6 +267,7 @@ const AddStaff = () => {
     newErrors.mobile = validateField("mobile", formData.mobile);
     newErrors.email = validateField("email", formData.email);
     newErrors.joiningDate = validateField("joiningDate", formData.joiningDate);
+    newErrors.gender = validateField("gender", formData.gender);
     newErrors.password = validateField("password", formData.password);
     newErrors.confirmPassword = validateField("confirmPassword", formData.confirmPassword);
 
@@ -304,6 +315,9 @@ const AddStaff = () => {
         if (data.success && data.roles && data.bloodGroups) {
           setRoles(data.roles);
           setBloodGroups(data.bloodGroups);
+          if (data.genders && data.genders.length) {
+            setGenders(data.genders);
+          }
           setApiError(false);
         } else {
           throw new Error("Invalid data format");
@@ -449,7 +463,7 @@ const AddStaff = () => {
     // Mark all Step-2 fields as touched so errors display
     const step2Fields = [
       'employeeId', 'employeeName', 'role', 'mobile', 'email',
-      'joiningDate', 'password', 'confirmPassword'
+      'joiningDate', 'gender', 'password', 'confirmPassword'
     ];
     const touchedFields = { ...touched };
     step2Fields.forEach(field => { touchedFields[field] = true; });
@@ -483,7 +497,7 @@ const AddStaff = () => {
 
     // Mark all fields as touched
     const allFields = [
-      'employeeId', 'employeeName', 'role', 'mobile', 'email', 'joiningDate', 'password', 'confirmPassword'
+      'employeeId', 'employeeName', 'role', 'mobile', 'email', 'joiningDate', 'gender', 'password', 'confirmPassword'
     ];
     const touchedFields = {};
     allFields.forEach(field => { touchedFields[field] = true; });
@@ -861,7 +875,10 @@ const AddStaff = () => {
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  options={["Male", "Female"]}
+                  onBlur={() => handleBlur("gender")}
+                  options={genders}
+                  required
+                  error={touched.gender && errors.gender}
                 />
                 <FSelect
                   label="Blood Group"

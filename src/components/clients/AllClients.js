@@ -63,6 +63,20 @@ const getLeadBadgeClass = (leadRaw) => {
   return FALLBACK_BADGE_STYLES[hash % FALLBACK_BADGE_STYLES.length];
 };
 
+const normalizeLeadStatus = (value) => {
+  const raw = value === undefined || value === null ? '' : String(value).trim();
+  if (!raw) return 'Running';
+
+  const normalized = raw.toLowerCase();
+  if (['converted', 'conversion', 'converted lead', 'won', 'closed won'].includes(normalized)) {
+    return 'Converted';
+  }
+  if (['cancelled', 'canceled', 'cancel', 'rejected', 'lost', 'closed lost'].includes(normalized)) {
+    return 'Cancelled';
+  }
+  return 'Running';
+};
+
 const AllClients = () => {
   const navigate = useNavigate();
 
@@ -132,17 +146,14 @@ const AllClients = () => {
 
   // Lead status counts (Running / Converted / Cancelled)
   const leadStats = useMemo(() => {
-    const getStatus = (c) =>
-      (c.leadStatus || c.status || c.lead || "").toString().trim().toLowerCase();
-
     const running = clients.filter(
-      (c) => getStatus(c) === "running"
+      (c) => normalizeLeadStatus(c.leadStatus || c.status || c.lead) === 'Running'
     ).length;
     const converted = clients.filter(
-      (c) => getStatus(c) === "converted"
+      (c) => normalizeLeadStatus(c.leadStatus || c.status || c.lead) === 'Converted'
     ).length;
     const cancelled = clients.filter(
-      (c) => getStatus(c) === "cancelled" || getStatus(c) === "canceled"
+      (c) => normalizeLeadStatus(c.leadStatus || c.status || c.lead) === 'Cancelled'
     ).length;
 
     return { running, converted, cancelled };
