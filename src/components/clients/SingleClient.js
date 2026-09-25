@@ -65,7 +65,11 @@ const SingleClient = () => {
   // Update lead status (Converted / Cancelled)
   const handleStatusUpdate = async (status) => {
     if (!client) return;
-    const nextStatus = normalizeLeadStatus(status);
+
+    const nextStatus = ['Running', 'Converted', 'Cancelled'].includes(status)
+      ? status
+      : normalizeLeadStatus(status);
+
     setStatusUpdating(true);
     try {
       const response = await fetch(`${API_URL}/${id}/status`, {
@@ -74,16 +78,20 @@ const SingleClient = () => {
           Authorization: `Bearer ${AUTH_TOKEN}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ leadStatus: nextStatus }),
+        body: JSON.stringify({
+          leadStatus: nextStatus,
+          status: nextStatus,
+          lead: nextStatus,
+        }),
       });
       const data = await response.json();
 
       if (data.success) {
-        const updatedStatus = normalizeLeadStatus(data.data?.leadStatus || nextStatus);
+        const updatedStatus = normalizeLeadStatus(data.data?.leadStatus || data.data?.status || data.data?.lead || nextStatus);
         setClient(prev => ({ ...prev, leadStatus: updatedStatus }));
         showToast('success', `Client marked as ${updatedStatus}`);
       } else {
-        showToast('error', data.message || 'Failed to update status');
+        showToast('error', data.message || data.error || 'Failed to update status');
       }
     } catch (err) {
       showToast('error', 'Network error while updating status');

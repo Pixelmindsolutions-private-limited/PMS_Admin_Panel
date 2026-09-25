@@ -26,21 +26,32 @@ import { useLocation } from "react-router-dom";
 
 const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff" || "https://pmsbackend.pixelmindsolutions.com/api/staff";
 
-const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
+const getLoginDetails = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem("loginDetails") || "null");
+  } catch (error) {
+    return null;
+  }
+};
 
-const AUTH_TOKEN = loginDetails?.token;
+const getStaffAccess = () => {
+  const loginDetails = getLoginDetails();
+  const permission = loginDetails?.modulePermissions?.find(
+    (item) => item.component === "staffManagement"
+  );
 
-const permission = loginDetails?.modulePermissions?.find(
-  (item) => item.component === "staffManagement"
-);
+  return permission?.items?.[0]?.permission || [];
+};
 
-const access = permission?.items?.[0]?.permission || [];
+const getAuthToken = () => getLoginDetails()?.token;
 
-// Helper — case-insensitive admin check + safe permission lookup
-const isAdmin = (loginDetails?.role || "").toLowerCase() === "admin";
+const can = (action) => {
+  const loginDetails = getLoginDetails();
+  const isAdmin = (loginDetails?.role || "").toLowerCase() === "admin";
+  const access = getStaffAccess();
 
-const can = (action) =>
-  isAdmin || (Array.isArray(access) && access.includes(action));
+  return isAdmin || (Array.isArray(access) && access.includes(action));
+};
 
 const Staff = () => {
   const navigate = useNavigate();
@@ -56,6 +67,7 @@ const Staff = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const { state } = useLocation();
+  const AUTH_TOKEN = getAuthToken();
 
   useEffect(() => {
     fetchStaff();
