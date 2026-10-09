@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MdEdit, MdArrowBack, MdDownload, MdPhone, MdEmail, MdLocationOn, MdPerson, MdCancel, MdCheckCircle } from 'react-icons/md';
 import { FaUsers, FaCalendarAlt, FaTag } from 'react-icons/fa';
@@ -16,6 +16,7 @@ const SingleClient = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const statusUpdateLock = useRef(false);
   const [toastMsg, setToastMsg] = useState(null);
 
   useEffect(() => {
@@ -62,14 +63,14 @@ const SingleClient = () => {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  // Update lead status (Converted / Cancelled)
   const handleStatusUpdate = async (status) => {
-    if (!client) return;
+    if (!client || statusUpdateLock.current) return;
 
     const nextStatus = ['Running', 'Converted', 'Cancelled'].includes(status)
       ? status
       : normalizeLeadStatus(status);
 
+    statusUpdateLock.current = true;
     setStatusUpdating(true);
     try {
       const response = await fetch(`${API_URL}/${id}/status`, {
@@ -88,7 +89,8 @@ const SingleClient = () => {
 
       if (data.success) {
         const updatedStatus = normalizeLeadStatus(data.data?.leadStatus || data.data?.status || data.data?.lead || nextStatus);
-        setClient(prev => ({ ...prev, leadStatus: updatedStatus }));
+        await fetchClient();
+        setClient(prev => prev ? { ...prev, leadStatus: updatedStatus } : prev);
         showToast('success', `Client marked as ${updatedStatus}`);
       } else {
         showToast('error', data.message || data.error || 'Failed to update status');
@@ -96,6 +98,7 @@ const SingleClient = () => {
     } catch (err) {
       showToast('error', 'Network error while updating status');
     } finally {
+      statusUpdateLock.current = false;
       setStatusUpdating(false);
     }
   };
@@ -111,6 +114,13 @@ const SingleClient = () => {
     });
   };
 
+  // Human-readable requirement label
+  const formatRequirement = (req) => {
+    if (Array.isArray(req) && req.length) return req.join(', ');
+    if (typeof req === 'string' && req.trim()) return req;
+    return '—';
+  };
+
   const exportToExcel = () => {
     if (!client) return;
     const ws = XLSX.utils.json_to_sheet([{
@@ -119,6 +129,7 @@ const SingleClient = () => {
       'Email': client.email,
       'Address': client.address,
       'Lead Source': client.lead,
+      'Requirements': Array.isArray(client.requirement) ? client.requirement.join(', ') : (client.requirement || ''),
       'Created': formatDate(client.createdAt),
       'Updated': formatDate(client.updatedAt),
     }]);
@@ -170,7 +181,6 @@ const SingleClient = () => {
         }
       `}</style>
 
-      {/* Toast */}
       {toastMsg && (
         <div className={`toast-in fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm max-w-sm no-print ${toastMsg.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
           <span>{toastMsg.type === 'success' ? '✓' : '!'}</span>
@@ -180,7 +190,6 @@ const SingleClient = () => {
       )}
 
       <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
-        {/* Top Nav */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 no-print">
           <button onClick={() => navigate('/clients')}
             className="flex items-center gap-2 text-gray-600 hover:text-teal-700 font-medium text-sm transition-colors self-start">
@@ -231,6 +240,20 @@ const SingleClient = () => {
                     </div>
                   )}
                 </div>
+
+                {/* Requirements hero chips */}
+                {Array.isArray(client.requirement) && client.requirement.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {client.requirement.map((r, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-white bg-white/15 border border-white/20 rounded-full px-3 py-1 backdrop-blur"
+                      >
+                        ⚡ {r}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -238,7 +261,6 @@ const SingleClient = () => {
 
         {/* Details Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Info (Left - 2 columns) */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-100">
@@ -249,14 +271,18 @@ const SingleClient = () => {
                 <InfoItem label="Mobile Number" value={client.mobile} icon="📱" />
                 <InfoItem label="Email Address" value={client.email} icon="📧" />
                 <InfoItem label="Lead Source" value={client.lead} icon="🎯" />
+                <InfoItem
+                  label="Requirements"
+                  value={formatRequirement(client.requirement)}
+                  icon="⚡"
+                  className="sm:col-span-2"
+                />
                 <InfoItem label="Address" value={client.address} icon="📍" className="sm:col-span-2" />
               </div>
             </div>
           </div>
 
-          {/* Sidebar (Right - 1 column) */}
           <div className="space-y-6">
-            {/* Timestamps Card with Actions */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-4 pb-3 border-b border-gray-100">
                 <FaCalendarAlt className="inline mr-2 text-teal-600" /> Timestamps
@@ -267,17 +293,13 @@ const SingleClient = () => {
                 <InfoItem label="Client ID" value={client._id} icon="🆔" />
               </div>
 
-              {/* Lead Actions inside Timestamps card */}
-              {/* Lead Actions inside Timestamps card */}
               <div className="mt-6 pt-4 border-t border-gray-100">
-
                 {client.leadStatus && (
                   <p className="text-xs text-gray-500 mb-3 text-center">
                     Current status: <span className="font-semibold text-gray-700">{client.leadStatus}</span>
                   </p>
                 )}
                 <div className="flex items-center justify-center gap-3">
-
                   <button
                     onClick={() => handleStatusUpdate('Cancelled')}
                     disabled={statusUpdating}
@@ -286,7 +308,7 @@ const SingleClient = () => {
                   </button>
                   <button
                     onClick={() => handleStatusUpdate('Converted')}
-                    disabled={statusUpdating}
+                    disabled={statusUpdating || client.leadStatus === 'Converted'}
                     className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     <MdCheckCircle size={16} /> Convert
                   </button>

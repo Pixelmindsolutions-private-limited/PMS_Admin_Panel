@@ -26,8 +26,6 @@ import {
 /*  Access helpers                                                     */
 /* ------------------------------------------------------------------ */
 
-// Maps a sidebar menu item's internal id to the "component" key used
-// inside modulePermissions on the staff record.
 const COMPONENT_KEY_MAP = {
   dashboard: 'dashboard',
   staff: 'staffManagement',
@@ -45,11 +43,9 @@ const COMPONENT_KEY_MAP = {
 
 const getLoggedInUser = () => {
   try {
-    // Staff (and, in some flows, admin) sessions are stored under 'loginDetails'.
     const loginDetails = sessionStorage.getItem('loginDetails');
     if (loginDetails) return JSON.parse(loginDetails);
 
-    // Fallback for admin sessions stored under a separate key.
     const adminDetails = sessionStorage.getItem('adminDetails');
     if (adminDetails) return JSON.parse(adminDetails);
   } catch (err) {
@@ -63,8 +59,6 @@ const isAdminRole = (role) => {
   return role.toString().trim().toLowerCase() === 'admin';
 };
 
-// A module is considered accessible if it exists in modulePermissions
-// and at least one of its items has a non-empty permission array.
 const hasModuleAccess = (modulePermissions, componentKey) => {
   if (!componentKey || !Array.isArray(modulePermissions)) return false;
   const module = modulePermissions.find((m) => m.component === componentKey);
@@ -76,9 +70,6 @@ const hasModuleAccess = (modulePermissions, componentKey) => {
 
 /* ------------------------------------------------------------------ */
 /*  Menu definitions                                                   */
-/*  Every submenu entry carries an `access` tag:                       */
-/*    'view'   -> visible to staff (read-level links)                  */
-/*    'manage' -> create/add links, admin-only                         */
 /* ------------------------------------------------------------------ */
 
 const ALL_MENU_ITEMS = [
@@ -175,24 +166,10 @@ const ALL_MENU_ITEMS = [
     submenu: [
       { path: '/create-invoice', label: 'Create Invoice', icon: <MdAddCircleOutline />, description: 'New invoice', access: 'manage' },
       { path: '/invoices', label: 'Invoice List', icon: <MdListAlt />, description: 'All invoices', access: 'view' },
-      // { path: '/invoices1', label: 'Advanced Invoice', icon: <MdDownload />, description: 'Pro format', access: 'view' },
     ],
   },
-  // {
-  //   id: 'payslip',
-  //   label: 'Payroll',
-  //   icon: <MdAssignment />,
-  //   description: 'Salary processing',
-  //   moduleKey: 'payslip',
-  //   submenu: [
-  //     { path: '/create-payslip', label: 'Generate Payslip', icon: <MdAddCircleOutline />, description: 'Monthly payroll', access: 'manage' },
-  //     { path: '/payslips', label: 'Payslip History', icon: <MdListAlt />, description: 'View all', access: 'view' },
-  //   ],
-  // },
 ];
 
-// Bottom items are admin-only (there's no corresponding modulePermissions
-// entry for these on staff records).
 const BOTTOM_MENU_ITEMS = [
   {
     id: 'employee-access',
@@ -225,19 +202,17 @@ const BOTTOM_MENU_ITEMS = [
 
 const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
   const location = useLocation();
-  const [openMenus, setOpenMenus] = useState({});
+  // ✅ Single-open accordion state (was `openMenus` object before)
+  const [openMenu, setOpenMenu] = useState(null);
   const [currentUser] = useState(getLoggedInUser);
 
   const admin = isAdminRole(currentUser?.role);
   const modulePermissions = currentUser?.modulePermissions || [];
 
-  // Build the visible menu (top + bottom) based on role/permissions.
   const { visibleMenuItems, visibleBottomItems } = useMemo(() => {
-    // Admin sees everything, unmodified.
     if (admin) {
       return { visibleMenuItems: ALL_MENU_ITEMS, visibleBottomItems: BOTTOM_MENU_ITEMS };
     }
-    
 
     const filterForStaff = (items) =>
       items.reduce((acc, item) => {
@@ -259,31 +234,35 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
 
     return {
       visibleMenuItems: filterForStaff(ALL_MENU_ITEMS),
-      // Staff never see the admin-only bottom section.
       visibleBottomItems: [],
     };
   }, [admin, modulePermissions]);
 
   const navigate = useNavigate();
 
-  // Restore open menus based on current path
+  // ✅ Restore open menu based on current route (only ONE can be open)
   useEffect(() => {
-    const paths = [
-      'staff', 'projects', 'assigned-works', 'work-session', 'invoice', 'payslip',
-      'analytics', 'settings', 'security', 'clients', 'installments', 'attendance', 'employee-access',
-    ];
-    paths.forEach((path) => {
-      if (location.pathname.includes(path) && !openMenus[path]) {
-        setOpenMenus((prev) => ({ ...prev, [path]: true }));
-      }
-    });
-  }, [location.pathname]);
+    const allItems = [...visibleMenuItems, ...visibleBottomItems];
 
-  const toggleSubmenu = (path) => {
-    setOpenMenus((prev) => ({
-      ...prev,
-      [path]: !prev[path],
-    }));
+    // Find the item whose submenu contains the current pathname
+    const matchedItem = allItems.find((item) =>
+      item.submenu?.some((sub) => sub.path === location.pathname)
+    );
+
+    if (matchedItem) {
+      // Only update if different — prevents resetting manual toggle on unrelated re-renders
+      setOpenMenu((current) =>
+        current === matchedItem.id ? current : matchedItem.id
+      );
+    }
+    // NOTE: if no submenu matches, we intentionally do NOT reset openMenu.
+    // This allows a user to freely open/close any section while on a
+    // top-level page (e.g. /dashboard) without the effect overriding them.
+  }, [location.pathname, visibleMenuItems, visibleBottomItems]);
+
+  // ✅ Accordion toggle — clicking the open one closes it, clicking another opens it
+  const toggleSubmenu = (id) => {
+    setOpenMenu((current) => (current === id ? null : id));
   };
 
   const handleLogout = () => {
@@ -327,12 +306,12 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
                 <span className="text-[8px] sm:text-[10px] opacity-60 truncate">{item.description}</span>
               </div>
             </div>
-            <span className={`transition-transform duration-400 opacity-70 shrink-0 ml-1 ${openMenus[item.id] ? 'rotate-180' : 'rotate-0'}`}>
-              {openMenus[item.id] ? <MdExpandLess size={16} className="sm:text-[18px] md:text-[20px]" /> : <MdExpandMore size={16} className="sm:text-[18px] md:text-[20px]" />}
+            <span className={`transition-transform duration-400 opacity-70 shrink-0 ml-1 ${openMenu === item.id ? 'rotate-180' : 'rotate-0'}`}>
+              {openMenu === item.id ? <MdExpandLess size={16} className="sm:text-[18px] md:text-[20px]" /> : <MdExpandMore size={16} className="sm:text-[18px] md:text-[20px]" />}
             </span>
           </div>
 
-          {openMenus[item.id] && (
+          {openMenu === item.id && (
             <div className="ml-4 sm:ml-5 pl-3 sm:pl-4 border-l border-teal-400 relative mt-1 mb-2">
               {item.submenu.map((subItem, subIndex) => (
                 <Link
@@ -445,10 +424,8 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
 
           {visibleBottomItems.length > 0 && (
             <>
-              {/* Divider */}
               <div className="h-px bg-white/10 my-3 sm:my-5 mx-3 sm:mx-4" />
 
-              {/* Bottom Menu Items with Submenu (admin only) */}
               {visibleBottomItems.map((item, index) => renderMenuItem(item, index, 'slideInBottomSubmenu'))}
             </>
           )}
