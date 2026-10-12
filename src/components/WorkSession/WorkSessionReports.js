@@ -1,18 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   TrendingUp, Calendar, Download, RefreshCw, Filter,
   BarChart3, PieChart, Users, Clock, Coffee, Activity,
-  AlertCircle, Loader2, ChevronLeft, ChevronRight
+  AlertCircle, Loader2, ChevronLeft, ChevronRight, Eye,
+  PauseCircle, PlayCircle, CheckCircle2
 } from 'lucide-react';
 import { getAuthHeaders, API_BASE_URL } from '../../utils/Auth';
 import * as XLSX from 'xlsx';
+import SingleEmployeeLiveTrackerModal from './SingleEmployeeLiveTrackerModal';
 
 const WorkSessionReports = () => {
   const [reportData, setReportData] = useState([]);
-  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'detailed'
+  const [expandedEmployeeId, setExpandedEmployeeId] = useState(null);
+  const [liveTrackerEmpId, setLiveTrackerEmpId] = useState(null);
   
   // Filters
   const [dateRange, setDateRange] = useState({
@@ -22,12 +26,11 @@ const WorkSessionReports = () => {
   const [employeeFilter, setEmployeeFilter] = useState("");
   const [employees, setEmployees] = useState([]);
 
-  // Pagination
+  // Pagination for summary table
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
 
-  // Fetch employees for filter
+  // Fetch employees for dropdown filter
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -35,7 +38,7 @@ const WorkSessionReports = () => {
           headers: getAuthHeaders()
         });
         const data = await response.json();
-        if (data.success) {
+        if (data.success && Array.isArray(data.data)) {
           setEmployees(data.data);
         }
       } catch (error) {
@@ -45,27 +48,124 @@ const WorkSessionReports = () => {
     fetchEmployees();
   }, []);
 
-  // Fetch report data
+  // Fetch report data (with fallback to all-sessions aggregation)
   const fetchReport = async () => {
     setRefreshing(true);
     try {
-      let url = `${API_BASE_URL}/work-session/admin/report?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
-      if (employeeFilter) {
-        url += `&employeeId=${employeeFilter}`;
+      let fetchedReport = null;
+
+      // 1. Try dedicated admin report endpoint
+      try {
+        let url = `${API_BASE_URL}/work-session/admin/report?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
+        if (employeeFilter) {
+          url += `&employeeId=${employeeFilter}`;
+        }
+        const response = await fetch(url, { headers: getAuthHeaders() });
+        const data = await response.json();
+        if (data.success && Array.isArray(data.data)) {
+          fetchedReport = data.data;
+        }
+      } catch (_) {}
+
+      // 2. Fallback: Aggregate from all-sessions if backend report endpoint is not ready
+      if (!fetchedReport) {
+        let fallbackUrl = `${API_BASE_URL}/work-session/all-sessions?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&limit=500`;
+        if (employeeFilter) {
+          fallbackUrl += `&employeeId=${employeeFilter}`;
+        }
+        const resp = await fetch(fallbackUrl, { headers: getAuthHeaders() });
+        const allData = await resp.json();
+
+        if (allData.success && Array.isArray(allData.data?.sessions)) {
+          const sessions = allData.data.sessions;
+          const map = {};
+
+          sessions.forEach(s => {
+            const id = s.employeeId;
+            if (!map[id]) {
+              map[id] = {
+                employeeId: id,
+                employeeName: s.employeeName || 'Unknown',
+                totalSessions: 0,
+                totalWorkMinutes: 0,
+                totalBreakMinutes: 0,
+                totalIdleMinutes: 0,
+                lunchBreakMinutes: 0,
+                teaBreakMinutes: 0,
+                otherBreakMinutes: 0,
+                days: []
+              };
+            }
+
+            let lunchM = 0;
+            let teaM = 0;
+            let otherM = 0;
+
+            if (Array.isArray(s.breaks)) {
+              s.breaks.forEach(b => {
+                const dur = b.duration || (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / 60000 : 0);
+                const r = (b.reason || b.type || '').toLowerCase();
+                if (r.includes('lunch')) lunchM += dur;
+                else if (r.includes('tea')) teaM += dur;
+                else otherM += dur;
+              });
+            }
+
+            const workMin = s.totalWorkDuration || 0;
+            const breakMin = s.totalBreakDuration || 0;
+            const idleMin = s.totalIdleTime || 0;
+
+            map[id].totalSessions += 1;
+            map[id].totalWorkMinutes += workMin;
+            map[id].totalBreakMinutes += breakMin;
+            map[id].totalIdleMinutes += idleMin;
+            map[id].lunchBreakMinutes += lunchM;
+            map[id].teaBreakMinutes += teaM;
+            map[id].otherBreakMinutes += otherM;
+
+            map[id].days.push({
+              sessionId: s._id,
+              date: s.date,
+              startTime: s.startTime,
+              endTime: s.endTime,
+              status: s.status,
+              workMinutes: Math.round(workMin),
+              workHours: (workMin / 60).toFixed(2),
+              delayMinutes: Math.round(idleMin),
+              delayHours: (idleMin / 60).toFixed(2),
+              lunchMinutes: Math.round(lunchM),
+              teaMinutes: Math.round(teaM),
+              totalBreakMinutes: Math.round(breakMin),
+              totalBreakHours: (breakMin / 60).toFixed(2),
+              productivity: (workMin + breakMin) > 0 ? Math.round((workMin / (workMin + breakMin)) * 100) : 0
+            });
+          });
+
+          fetchedReport = Object.values(map).map(emp => {
+            const totalWorkHours = (emp.totalWorkMinutes / 60).toFixed(2);
+            const totalBreakHours = (emp.totalBreakMinutes / 60).toFixed(2);
+            const totalIdleHours = (emp.totalIdleMinutes / 60).toFixed(2);
+            const lunchBreakHours = (emp.lunchBreakMinutes / 60).toFixed(2);
+            const teaBreakHours = (emp.teaBreakMinutes / 60).toFixed(2);
+            const totalMinutes = emp.totalWorkMinutes + emp.totalBreakMinutes;
+            const productivity = totalMinutes > 0 ? Math.round((emp.totalWorkMinutes / totalMinutes) * 100) : 0;
+
+            return {
+              ...emp,
+              totalWorkHours,
+              totalBreakHours,
+              totalIdleHours,
+              lunchBreakHours,
+              teaBreakHours,
+              productivity
+            };
+          });
+        }
       }
-      
-      const response = await fetch(url, {
-        headers: getAuthHeaders()
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        setReportData(data.data);
-        calculateSummary(data.data);
-        setTotalPages(Math.ceil(data.data.length / itemsPerPage));
-      }
+
+      setReportData(fetchedReport || []);
     } catch (error) {
-      console.error("Error fetching report:", error);
+      console.error("Error fetching report data:", error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -76,290 +176,444 @@ const WorkSessionReports = () => {
     fetchReport();
   }, [dateRange, employeeFilter]);
 
-  const calculateSummary = (data) => {
-    const totalEmployees = data.length;
-    const totalWorkHours = data.reduce((sum, emp) => sum + (emp.totalWorkMinutes || 0), 0) / 60;
-    const totalBreakHours = data.reduce((sum, emp) => sum + (emp.totalBreakMinutes || 0), 0) / 60;
-    const totalIdleHours = data.reduce((sum, emp) => sum + (emp.totalIdleMinutes || 0), 0) / 60;
-    const totalDaysWorked = data.reduce((sum, emp) => sum + (emp.days?.length || 0), 0);
-    
-    // Calculate average productivity
-    let totalProductivity = 0;
-    data.forEach(emp => {
-      const totalMinutes = (emp.totalWorkMinutes || 0) + (emp.totalBreakMinutes || 0);
-      const productivity = totalMinutes > 0 ? (emp.totalWorkMinutes / totalMinutes) * 100 : 0;
-      totalProductivity += productivity;
-    });
-    const avgProductivity = totalEmployees > 0 ? Math.round(totalProductivity / totalEmployees) : 0;
-    
-    // Find top performers
-    const topPerformers = [...data].sort((a, b) => (b.totalWorkMinutes || 0) - (a.totalWorkMinutes || 0)).slice(0, 5);
-    
-    setSummary({
+  // Quick preset filters
+  const setQuickRange = (days) => {
+    const end = new Date().toISOString().split("T")[0];
+    const start = new Date(new Date().setDate(new Date().getDate() - days)).toISOString().split("T")[0];
+    setDateRange({ startDate: start, endDate: end });
+    setCurrentPage(1);
+  };
+
+  // High-level summary totals
+  const summary = useMemo(() => {
+    const totalEmployees = reportData.length;
+    const totalWorkHours = reportData.reduce((sum, emp) => sum + (parseFloat(emp.totalWorkHours) || (emp.totalWorkMinutes || 0) / 60), 0);
+    const totalBreakHours = reportData.reduce((sum, emp) => sum + (parseFloat(emp.totalBreakHours) || (emp.totalBreakMinutes || 0) / 60), 0);
+    const totalIdleHours = reportData.reduce((sum, emp) => sum + (parseFloat(emp.totalIdleHours) || (emp.totalIdleMinutes || 0) / 60), 0);
+    const totalLunchHours = reportData.reduce((sum, emp) => sum + (parseFloat(emp.lunchBreakHours) || (emp.lunchBreakMinutes || 0) / 60), 0);
+    const totalTeaHours = reportData.reduce((sum, emp) => sum + (parseFloat(emp.teaBreakHours) || (emp.teaBreakMinutes || 0) / 60), 0);
+    const totalDaysWorked = reportData.reduce((sum, emp) => sum + (emp.days?.length || emp.totalSessions || 0), 0);
+
+    const avgProductivity = totalEmployees > 0
+      ? Math.round(reportData.reduce((sum, emp) => sum + (emp.productivity || 0), 0) / totalEmployees)
+      : 0;
+
+    return {
       totalEmployees,
       totalWorkHours: totalWorkHours.toFixed(1),
       totalBreakHours: totalBreakHours.toFixed(1),
       totalIdleHours: totalIdleHours.toFixed(1),
+      totalLunchHours: totalLunchHours.toFixed(1),
+      totalTeaHours: totalTeaHours.toFixed(1),
       totalDaysWorked,
-      avgProductivity,
-      topPerformers
-    });
-  };
+      avgProductivity
+    };
+  }, [reportData]);
 
+  // Export comprehensive report to Excel
   const exportToExcel = () => {
-    const exportData = reportData.map(emp => ({
+    // 1. Employee-level sheet
+    const summarySheetData = reportData.map(emp => ({
       "Employee ID": emp.employeeId,
       "Employee Name": emp.employeeName,
-      "Total Work (Hours)": ((emp.totalWorkMinutes || 0) / 60).toFixed(2),
-      "Total Break (Hours)": ((emp.totalBreakMinutes || 0) / 60).toFixed(2),
-      "Total Idle (Hours)": ((emp.totalIdleMinutes || 0) / 60).toFixed(2),
-      "Days Worked": emp.days?.length || 0,
-      "Productivity (%)": emp.days?.length > 0 ? Math.round(((emp.totalWorkMinutes || 0) / ((emp.totalWorkMinutes || 0) + (emp.totalBreakMinutes || 0))) * 100) : 0
+      "Days / Sessions": emp.days?.length || emp.totalSessions || 0,
+      "Total Working (Hours)": emp.totalWorkHours,
+      "Delay / Idle Time (Hours)": emp.totalIdleHours,
+      "Lunch Break (Hours)": emp.lunchBreakHours,
+      "Tea Break (Hours)": emp.teaBreakHours,
+      "Total Break (Hours)": emp.totalBreakHours,
+      "Productivity (%)": `${emp.productivity}%`
     }));
 
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    // 2. Day-level detailed sheet
+    const detailedSheetData = [];
+    reportData.forEach(emp => {
+      (emp.days || []).forEach(d => {
+        detailedSheetData.push({
+          "Employee ID": emp.employeeId,
+          "Employee Name": emp.employeeName,
+          "Date": d.date ? new Date(d.date).toLocaleDateString() : "-",
+          "Start Time": d.startTime ? new Date(d.startTime).toLocaleTimeString() : "-",
+          "End Time": d.endTime ? new Date(d.endTime).toLocaleTimeString() : "-",
+          "Work Duration (Hours)": d.workHours,
+          "Delay / Idle (Hours)": d.delayHours,
+          "Lunch (Mins)": d.lunchMinutes,
+          "Tea (Mins)": d.teaMinutes,
+          "Total Break (Hours)": d.totalBreakHours,
+          "Productivity (%)": `${d.productivity}%`
+        });
+      });
+    });
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Work Report");
-    XLSX.writeFile(wb, `Work_Report_${dateRange.startDate}_to_${dateRange.endDate}.xlsx`);
+    const ws1 = XLSX.utils.json_to_sheet(summarySheetData);
+    XLSX.utils.book_append_sheet(wb, ws1, "Employee Summary");
+
+    if (detailedSheetData.length > 0) {
+      const ws2 = XLSX.utils.json_to_sheet(detailedSheetData);
+      XLSX.utils.book_append_sheet(wb, ws2, "Day-by-Day Sessions");
+    }
+
+    XLSX.writeFile(wb, `PMS_Work_Session_Report_${dateRange.startDate}_to_${dateRange.endDate}.xlsx`);
   };
 
-  const formatDuration = (minutes) => {
-    if (!minutes || minutes === 0) return "0h 0m";
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.floor(minutes % 60);
-    return `${hours}h ${mins}m`;
-  };
+  // Paginated items
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return reportData.slice(startIndex, startIndex + itemsPerPage);
+  }, [reportData, currentPage]);
 
-  const getProductivityColor = (workMinutes, breakMinutes) => {
-    const total = workMinutes + breakMinutes;
-    if (total === 0) return "bg-gray-200";
-    const percentage = (workMinutes / total) * 100;
-    if (percentage >= 75) return "bg-emerald-500";
-    if (percentage >= 50) return "bg-teal-500";
-    if (percentage >= 25) return "bg-amber-500";
-    return "bg-red-500";
-  };
-
-  const getProductivityPercentage = (workMinutes, breakMinutes) => {
-    const total = workMinutes + breakMinutes;
-    if (total === 0) return 0;
-    return Math.round((workMinutes / total) * 100);
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 flex items-center justify-center p-4">
-        <div className="text-center space-y-4 animate-pulse">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-teal-100/60" />
-          <div className="h-4 w-48 mx-auto rounded bg-slate-200" />
-          <div className="h-3 w-64 mx-auto rounded bg-slate-100" />
-        </div>
-      </div>
-    );
-  }
-
-  const paginatedData = reportData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(reportData.length / itemsPerPage) || 1;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-teal-50/30 py-6 md:py-10 px-4 md:px-6">
-      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
-        
-        {/* HEADER */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-teal-50/20 to-slate-100/60 py-6 md:py-8 px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* HEADER SECTION */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/90 backdrop-blur-md p-5 rounded-3xl border border-slate-200/80 shadow-xs">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-xs font-extrabold bg-teal-50 text-teal-800 border border-teal-200">
+                SESSION REPORTS & ANALYTICS
+              </span>
+              <span className="text-xs font-semibold text-slate-400">
+                {dateRange.startDate} → {dateRange.endDate}
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold font-syne text-slate-900 mt-1">
               Work Session Reports
             </h1>
-            <p className="text-slate-500 mt-1 text-sm md:text-base">
-              Analytics and productivity insights
+            <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
+              Comprehensive report of working hours, delay/idle time, lunch and tea breaks, and productivity
             </p>
           </div>
-          <div className="flex gap-3">
+
+          <div className="flex gap-2.5">
             <button
               onClick={exportToExcel}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-emerald-200 text-emerald-700 hover:bg-emerald-50/60 font-semibold transition-all text-sm"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl border border-emerald-300 bg-emerald-50/50 text-emerald-800 hover:bg-emerald-100/60 font-bold transition-all text-xs cursor-pointer shadow-xs"
             >
-              <Download size={16} />
-              Export Report
+              <Download size={14} />
+              Export Full Report (.xlsx)
             </button>
             <button
               onClick={fetchReport}
               disabled={refreshing}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold transition-all text-sm"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-bold transition-all text-xs cursor-pointer shadow-sm shadow-teal-600/20"
             >
-              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
               Refresh
             </button>
           </div>
         </div>
 
-        {/* FILTERS */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl p-4 md:p-6 shadow-lg">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Start Date</label>
-              <input
-                type="date"
-                className="w-full h-11 px-3 border border-slate-200 rounded-xl bg-white/50 text-sm"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-              />
+        {/* TOP SUMMARY KPI TILES */}
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+          <div className="bg-white rounded-2xl p-4 border border-teal-100 shadow-xs">
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block mb-1">
+              EMPLOYEES
+            </span>
+            <div className="font-digital font-bold text-2xl text-slate-800">
+              {summary.totalEmployees}
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">End Date</label>
-              <input
-                type="date"
-                className="w-full h-11 px-3 border border-slate-200 rounded-xl bg-white/50 text-sm"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-              />
+            <p className="text-[10px] text-slate-400 mt-0.5">{summary.totalDaysWorked} total sessions</p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 border border-emerald-100 shadow-xs">
+            <span className="text-teal-700 text-[10px] font-bold uppercase tracking-wider block mb-1">
+              WORKING TIME
+            </span>
+            <div className="font-digital font-bold text-2xl text-[#113f36]">
+              {summary.totalWorkHours}h
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Employee</label>
-              <select
-                className="w-full h-11 px-3 border border-slate-200 rounded-xl bg-white/50 text-sm"
-                value={employeeFilter}
-                onChange={(e) => setEmployeeFilter(e.target.value)}
+            <p className="text-[10px] text-slate-400 mt-0.5">Total productive time</p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 border border-amber-100 shadow-xs">
+            <span className="text-amber-700 text-[10px] font-bold uppercase tracking-wider block mb-1">
+              DELAY / IDLE
+            </span>
+            <div className="font-digital font-bold text-2xl text-amber-800">
+              {summary.totalIdleHours}h
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0.5">Total inactivity</p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 border border-orange-100 shadow-xs">
+            <span className="text-orange-700 text-[10px] font-bold uppercase tracking-wider block mb-1">
+              🍱 LUNCH BREAKS
+            </span>
+            <div className="font-digital font-bold text-2xl text-orange-800">
+              {summary.totalLunchHours}h
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0.5">1:00 - 1:45 PM standard</p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 border border-teal-100 shadow-xs">
+            <span className="text-teal-700 text-[10px] font-bold uppercase tracking-wider block mb-1">
+              ☕ TEA BREAKS
+            </span>
+            <div className="font-digital font-bold text-2xl text-teal-800">
+              {summary.totalTeaHours}h
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0.5">5:00 - 5:15 PM standard</p>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 border border-blue-100 shadow-xs">
+            <span className="text-blue-700 text-[10px] font-bold uppercase tracking-wider block mb-1">
+              PRODUCTIVITY
+            </span>
+            <div className="font-digital font-bold text-2xl text-blue-800">
+              {summary.avgProductivity}%
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0.5">Average team score</p>
+          </div>
+        </div>
+
+        {/* FILTERS & DATE PRESET BAR */}
+        <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-xs space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* Quick Presets */}
+            <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600">
+              <button
+                type="button"
+                onClick={() => setQuickRange(0)}
+                className="px-3 py-1.5 rounded-xl hover:bg-white transition-all cursor-pointer"
               >
-                <option value="">All Employees</option>
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickRange(7)}
+                className="px-3 py-1.5 rounded-xl hover:bg-white transition-all cursor-pointer"
+              >
+                Last 7 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickRange(30)}
+                className="px-3 py-1.5 rounded-xl hover:bg-white transition-all cursor-pointer"
+              >
+                Last 30 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => setQuickRange(90)}
+                className="px-3 py-1.5 rounded-xl hover:bg-white transition-all cursor-pointer"
+              >
+                Last 90 Days
+              </button>
+            </div>
+
+            {/* Single Employee Filter */}
+            <div className="min-w-[220px]">
+              <select
+                className="w-full h-10 px-3.5 border border-slate-200 rounded-xl bg-slate-50 text-xs font-semibold text-slate-700 outline-none cursor-pointer"
+                value={employeeFilter}
+                onChange={(e) => {
+                  setEmployeeFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+              >
+                <option value="">All Employees ({employees.length})</option>
                 {employees.map(emp => (
-                  <option key={emp._id} value={emp.employeeId}>
+                  <option key={emp.employeeId} value={emp.employeeId}>
                     {emp.employeeName} ({emp.employeeId})
                   </option>
                 ))}
               </select>
             </div>
           </div>
-        </div>
 
-        {/* SUMMARY CARDS */}
-        {summary && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            <SummaryCard 
-              title="Total Employees" 
-              value={summary.totalEmployees} 
-              icon={<Users size={18} />} 
-              color="teal"
-            />
-            <SummaryCard 
-              title="Total Work Hours" 
-              value={summary.totalWorkHours} 
-              unit="hrs"
-              icon={<Clock size={18} />} 
-              color="emerald"
-            />
-            <SummaryCard 
-              title="Total Break Hours" 
-              value={summary.totalBreakHours} 
-              unit="hrs"
-              icon={<Coffee size={18} />} 
-              color="blue"
-            />
-            <SummaryCard 
-              title="Avg Productivity" 
-              value={summary.avgProductivity} 
-              unit="%"
-              icon={<TrendingUp size={18} />} 
-              color="purple"
-            />
-            <SummaryCard 
-              title="Total Days Worked" 
-              value={summary.totalDaysWorked} 
-              icon={<Calendar size={18} />} 
-              color="amber"
-            />
-          </div>
-        )}
-
-        {/* TOP PERFORMERS SECTION */}
-        {summary?.topPerformers?.length > 0 && (
-          <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl p-5 shadow-lg">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <TrendingUp size={18} className="text-teal-600" />
-              Top Performers
-            </h2>
-            <div className="space-y-3">
-              {summary.topPerformers.map((emp, idx) => {
-                const productivity = getProductivityPercentage(emp.totalWorkMinutes, emp.totalBreakMinutes);
-                return (
-                  <div key={emp.employeeId} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold">
-                        {idx + 1}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-slate-800">{emp.employeeName}</p>
-                        <p className="text-xs text-slate-400">{emp.employeeId}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-emerald-600">{formatDuration(emp.totalWorkMinutes)}</p>
-                      <p className="text-xs text-slate-400">Productivity: {productivity}%</p>
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">Start Date</label>
+              <input
+                type="date"
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl bg-slate-50 text-xs"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">End Date</label>
+              <input
+                type="date"
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl bg-slate-50 text-xs"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              />
             </div>
           </div>
-        )}
+        </div>
 
-        {/* DETAILED REPORT TABLE */}
-        <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-2xl shadow-lg overflow-hidden">
-          <div className="p-4 border-b border-slate-100">
-            <h2 className="text-lg font-semibold text-slate-800 flex items-center gap-2">
-              <BarChart3 size={18} className="text-teal-600" />
-              Detailed Employee Report
-            </h2>
+        {/* REPORT TABLE */}
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="font-syne font-bold text-sm text-slate-800">
+              Employee Performance Breakdown ({reportData.length} Employees)
+            </h3>
+            <span className="text-xs text-slate-400 font-semibold">
+              Calculated dynamically
+            </span>
           </div>
+
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gradient-to-r from-slate-50 to-slate-100/50 text-slate-600">
+            <table className="w-full text-xs">
+              <thead className="bg-slate-50/90 text-slate-600 border-b border-slate-200">
                 <tr>
-                  <th className="p-4 text-left font-semibold">#</th>
-                  <th className="p-4 text-left font-semibold">Employee</th>
-                  <th className="p-4 text-left font-semibold">Total Work</th>
-                  <th className="p-4 text-left font-semibold">Total Break</th>
-                  <th className="p-4 text-left font-semibold">Total Idle</th>
-                  <th className="p-4 text-center font-semibold">Days Worked</th>
-                  <th className="p-4 text-left font-semibold">Productivity</th>
+                  <th className="py-3.5 px-4 text-left font-bold">#</th>
+                  <th className="py-3.5 px-4 text-left font-bold">Employee</th>
+                  <th className="py-3.5 px-4 text-center font-bold">Days Worked</th>
+                  <th className="py-3.5 px-4 text-left font-bold text-teal-800">Working Time (Hrs)</th>
+                  <th className="py-3.5 px-4 text-left font-bold text-amber-800">Delay Time (Hrs)</th>
+                  <th className="py-3.5 px-4 text-left font-bold">Lunch Break</th>
+                  <th className="py-3.5 px-4 text-left font-bold">Tea Break</th>
+                  <th className="py-3.5 px-4 text-left font-bold">Total Break</th>
+                  <th className="py-3.5 px-left font-bold text-left">Productivity</th>
+                  <th className="py-3.5 px-4 text-center font-bold">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {paginatedData.length === 0 ? (
+              <tbody className="divide-y divide-slate-100">
+                {loading ? (
                   <tr>
-                    <td colSpan="7" className="p-12 text-center text-slate-400">
+                    <td colSpan="10" className="p-12 text-center text-slate-400">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-teal-600 mb-2" />
+                      <p>Calculating session report data...</p>
+                    </td>
+                  </tr>
+                ) : paginatedData.length === 0 ? (
+                  <tr>
+                    <td colSpan="10" className="p-12 text-center text-slate-400">
                       <AlertCircle className="w-10 h-10 mx-auto text-slate-300 mb-2" />
-                      <p>No data found for selected criteria</p>
+                      <p className="font-semibold text-sm">No report records found for this period</p>
                     </td>
                   </tr>
                 ) : (
                   paginatedData.map((emp, index) => {
-                    const productivity = getProductivityPercentage(emp.totalWorkMinutes, emp.totalBreakMinutes);
+                    const isExpanded = expandedEmployeeId === emp.employeeId;
+
                     return (
-                      <tr key={emp.employeeId} className="border-t border-slate-100/60 hover:bg-slate-50/40 transition-colors">
-                        <td className="p-4 font-medium text-slate-600">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                        <td className="p-4">
-                          <div>
-                            <div className="font-semibold text-slate-800">{emp.employeeName}</div>
-                            <div className="text-xs text-slate-400">{emp.employeeId}</div>
-                          </div>
-                        </td>
-                        <td className="p-4 font-medium text-emerald-600">{formatDuration(emp.totalWorkMinutes)}</td>
-                        <td className="p-4 text-blue-600">{formatDuration(emp.totalBreakMinutes)}</td>
-                        <td className="p-4 text-amber-600">{formatDuration(emp.totalIdleMinutes)}</td>
-                        <td className="p-4 text-center">{emp.days?.length || 0}</td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 bg-gray-200 rounded-full h-2">
-                              <div 
-                                className={`${getProductivityColor(emp.totalWorkMinutes, emp.totalBreakMinutes)} h-2 rounded-full`} 
-                                style={{ width: `${productivity}%` }}
-                              />
+                      <React.Fragment key={emp.employeeId}>
+                        <tr className="hover:bg-teal-50/20 transition-colors">
+                          <td className="py-3.5 px-4 font-semibold text-slate-400">
+                            {(currentPage - 1) * itemsPerPage + index + 1}
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div>
+                              <div className="font-bold text-slate-900">{emp.employeeName}</div>
+                              <div className="text-[11px] text-slate-400 font-medium">{emp.employeeId}</div>
                             </div>
-                            <span className="text-xs font-medium">{productivity}%</span>
-                          </div>
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-bold text-slate-700">
+                            {emp.days?.length || emp.totalSessions || 0}
+                          </td>
+                          <td className="py-3.5 px-4 font-bold text-teal-900 font-digital text-sm">
+                            {emp.totalWorkHours}h
+                          </td>
+                          <td className="py-3.5 px-4 font-bold text-amber-800 font-digital text-sm">
+                            {emp.totalIdleHours}h
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-orange-800">
+                            {emp.lunchBreakHours}h
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-teal-800">
+                            {emp.teaBreakHours}h
+                          </td>
+                          <td className="py-3.5 px-4 font-semibold text-slate-700">
+                            {emp.totalBreakHours}h
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    emp.productivity >= 80 ? 'bg-emerald-500' : emp.productivity >= 60 ? 'bg-blue-500' : 'bg-amber-500'
+                                  }`}
+                                  style={{ width: `${Math.min(100, emp.productivity)}%` }}
+                                />
+                              </div>
+                              <span className="font-mono-num font-bold text-slate-800 text-[11px]">
+                                {emp.productivity}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              {/* Open Live Tracker */}
+                              <button
+                                onClick={() => setLiveTrackerEmpId(emp.employeeId)}
+                                title="Open Single Employee Live Tracker"
+                                className="px-2.5 py-1.5 rounded-xl bg-teal-50 hover:bg-teal-100 text-teal-700 font-bold text-[11px] flex items-center gap-1 transition-all cursor-pointer"
+                              >
+                                <Activity size={12} />
+                                Live
+                              </button>
+
+                              {/* Toggle day-by-day logs */}
+                              {emp.days && emp.days.length > 0 && (
+                                <button
+                                  onClick={() => setExpandedEmployeeId(isExpanded ? null : emp.employeeId)}
+                                  className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition-all cursor-pointer"
+                                >
+                                  {isExpanded ? 'Hide' : 'Logs'}
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* EXPANDED DAY-BY-DAY ROW */}
+                        {isExpanded && emp.days && (
+                          <tr className="bg-slate-50/80">
+                            <td colSpan="10" className="p-4">
+                              <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs">
+                                <h4 className="font-syne font-bold text-xs text-slate-800 mb-3 flex items-center gap-1.5">
+                                  <span>📅</span> Daily Session Logs for {emp.employeeName} ({emp.days.length} Days)
+                                </h4>
+                                <div className="max-h-60 overflow-y-auto">
+                                  <table className="w-full text-[11px]">
+                                    <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
+                                      <tr>
+                                        <th className="p-2 text-left">Date</th>
+                                        <th className="p-2 text-left">Start Time</th>
+                                        <th className="p-2 text-left">End Time</th>
+                                        <th className="p-2 text-left">Working Time</th>
+                                        <th className="p-2 text-left">Delay / Idle</th>
+                                        <th className="p-2 text-left">Lunch</th>
+                                        <th className="p-2 text-left">Tea</th>
+                                        <th className="p-2 text-left">Total Break</th>
+                                        <th className="p-2 text-left">Productivity</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                      {emp.days.map((d, dIdx) => (
+                                        <tr key={dIdx} className="hover:bg-slate-50">
+                                          <td className="p-2 font-medium text-slate-800">
+                                            {d.date ? new Date(d.date).toLocaleDateString() : '-'}
+                                          </td>
+                                          <td className="p-2 text-slate-600">
+                                            {d.startTime ? new Date(d.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                          </td>
+                                          <td className="p-2 text-slate-600">
+                                            {d.endTime ? new Date(d.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Active'}
+                                          </td>
+                                          <td className="p-2 font-bold text-teal-900 font-digital">{d.workHours}h</td>
+                                          <td className="p-2 font-bold text-amber-800 font-digital">{d.delayHours}h</td>
+                                          <td className="p-2 font-semibold text-orange-800">{d.lunchMinutes}m</td>
+                                          <td className="p-2 font-semibold text-teal-800">{d.teaMinutes}m</td>
+                                          <td className="p-2 text-slate-700">{d.totalBreakHours}h</td>
+                                          <td className="p-2 font-bold text-blue-700">{d.productivity}%</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })
                 )}
@@ -367,50 +621,44 @@ const WorkSessionReports = () => {
             </table>
           </div>
 
-          {/* Pagination */}
+          {/* PAGINATION */}
           {totalPages > 1 && (
-            <div className="flex justify-center gap-2 p-4 border-t border-slate-100/60">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-4 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-sm font-medium"
-              >
-                <ChevronLeft size={16} className="inline mr-1" /> Prev
-              </button>
-              <span className="px-4 h-10 flex items-center text-sm text-slate-600">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-4 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-sm font-medium"
-              >
-                Next <ChevronRight size={16} className="inline ml-1" />
-              </button>
+            <div className="p-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+              <div>
+                Showing page {currentPage} of {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-all font-semibold cursor-pointer"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 disabled:opacity-40 hover:bg-slate-50 transition-all font-semibold cursor-pointer"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-};
 
-// Summary Card Component
-const SummaryCard = ({ title, value, unit, icon, color }) => {
-  const colors = {
-    teal: "from-teal-500 to-teal-600",
-    emerald: "from-emerald-500 to-emerald-600",
-    blue: "from-blue-500 to-blue-600",
-    purple: "from-purple-500 to-purple-600",
-    amber: "from-amber-500 to-amber-600"
-  };
-  return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-      <div className={`p-2 rounded-xl bg-gradient-to-br ${colors[color]} bg-opacity-10 inline-block mb-2`}>
-        {icon}
       </div>
-      <p className="text-2xl font-bold text-slate-800">{value}{unit && <span className="text-sm ml-0.5">{unit}</span>}</p>
-      <p className="text-xs text-slate-500 mt-1">{title}</p>
+
+      {/* SINGLE EMPLOYEE LIVE TRACKER MODAL */}
+      {liveTrackerEmpId && (
+        <SingleEmployeeLiveTrackerModal
+          employeeId={liveTrackerEmpId}
+          allEmployees={employees}
+          onClose={() => setLiveTrackerEmpId(null)}
+          onSelectEmployee={(newEmpId) => setLiveTrackerEmpId(newEmpId)}
+        />
+      )}
+
     </div>
   );
 };

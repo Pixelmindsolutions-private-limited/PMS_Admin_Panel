@@ -97,7 +97,8 @@ function App() {
 
 
 
-        <Route path="work-session-live" element={<WorkSessionLive />} />
+        {/* <Route path="work-session-live" element={<WorkSessionLive />} /> */}
+        <Route path="work-session-live/:employeeId" element={<WorkSessionLive />} />
         <Route path="work-session-history" element={<WorkSessionHistory />} />
         <Route path="work-session-reports" element={<WorkSessionReports />} />
 
