@@ -3,27 +3,21 @@ import { Link, useNavigate } from 'react-router-dom';
 import { MdEdit, MdDelete, MdVisibility, MdDownload, MdRefresh, MdAdd, MdGridView, MdTableRows } from 'react-icons/md';
 import { FaMobileAlt, FaEnvelope, FaSearch, FaFilter, FaFolderOpen, FaCalendarAlt, FaRupeeSign } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
+import { API_BASE } from '../../utils/Auth';
 
-const API_URL = 'https://pmsbackend.pixelmindsolutions.com/api/projects';
-const CLIENTS_API_URL = 'https://pmsbackend.pixelmindsolutions.com/api/clients';
+const API_URL = `${API_BASE}/projects`;
+const CLIENTS_API_URL = `${API_BASE}/clients`;
 
-const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
-
-const AUTH_TOKEN = loginDetails?.token;
-
-const permission = loginDetails?.modulePermissions?.find(
-  (item) => item.component === "projects"
-);
-
-const access = permission?.items?.[0]?.permission || [];
-
-// ✅ Case-insensitive admin check (fixes "admin" vs "Admin" mismatch)
-const IS_ADMIN = String(loginDetails?.role || "").toLowerCase() === "admin";
-
-const allowedProjectIds = loginDetails?.allowedProjects?.map((p) => p.projectId) || [];
+const getLoginDetails = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem("loginDetails") || "null");
+  } catch {
+    return null;
+  }
+};
 
 const headers = () => ({
-  Authorization: `Bearer ${AUTH_TOKEN}`,
+  Authorization: `Bearer ${getLoginDetails()?.token || ""}`,
   'Content-Type': 'application/json',
 });
 
@@ -73,12 +67,8 @@ const isConvertedLead = (client) => ['converted', 'conversion', 'converted lead'
 );
 
 /* ── PROJECT CARD ── */
-const ProjectCard = ({ p, idx, onView, onEdit, onDelete, onStatusChange }) => {
+const ProjectCard = ({ p, idx, onView, onEdit, onDelete, onStatusChange, canView, canEdit, canDelete }) => {
   const isClient = p.recordType === 'client';
-  // ✅ Per-card permission resolution (Admin bypass + case-insensitive)
-  const canView = IS_ADMIN || access.includes("view");
-  const canEdit = IS_ADMIN || access.includes("edit");
-  const canDelete = IS_ADMIN || access.includes("delete");
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 flex flex-col h-full">
@@ -171,6 +161,15 @@ const ProjectCard = ({ p, idx, onView, onEdit, onDelete, onStatusChange }) => {
 /* ── MAIN COMPONENT ── */
 const Projects = () => {
   const navigate = useNavigate();
+  const loginDetails = getLoginDetails();
+  const permission = loginDetails?.modulePermissions?.find((item) => item.component === "projects");
+  const access = permission?.items?.[0]?.permission || [];
+  const isAdmin = String(loginDetails?.role || "").toLowerCase() === "admin";
+  const canView = isAdmin || access.includes("view");
+  const canEdit = isAdmin || access.includes("edit");
+  const canDelete = isAdmin || access.includes("delete");
+  const canExport = isAdmin || access.includes("export");
+  const canAdd = isAdmin || access.includes("add");
 
   const [projects, setProjects] = useState([]);
   const [convertedClients, setConvertedClients] = useState([]);
@@ -207,11 +206,11 @@ const Projects = () => {
         const clientData = clientsData.success && Array.isArray(clientsData.data) ? clientsData.data : [];
 
         if (
-          String(loginDetails?.role || "").toLowerCase() === "staff" &&
-          !loginDetails?.isAllProjectsAllowed
+          String(getLoginDetails()?.role || "").toLowerCase() === "staff" &&
+          !getLoginDetails()?.isAllProjectsAllowed
         ) {
           const allowedProjectIds =
-            loginDetails?.allowedProjects?.map((p) => p.projectId) || [];
+            getLoginDetails()?.allowedProjects?.map((p) => p.projectId) || [];
 
           projectsData = projectsData.filter((project) =>
             allowedProjectIds.includes(project._id)
@@ -266,7 +265,7 @@ const Projects = () => {
     setDeleting(true);
 
     try {
-      // ✅ DELETE /api/projects/:id
+      // ✅ DELETE /api/clients/:id
       const isClient = confirmDelete.recordType === 'client';
       const response = await fetch(isClient ? `${CLIENTS_API_URL}/${id}/delete` : `${API_URL}/${id}`, {
         method: 'DELETE',
@@ -449,7 +448,7 @@ const Projects = () => {
               Delete {confirmDelete.recordType === 'client' ? 'Client' : 'Project'}?
             </h3>
             <p className="text-xs text-gray-500 text-center mb-5">
-              <span className="font-semibold text-gray-700">{confirmDelete.projectName}</span> will be permanently deleted. This action cannot be undone.
+              <span className="font-semibold text-gray-700">{confirmDelete.projectName}</span> will be removed from active projects.
             </p>
             <div className="flex gap-2.5">
               <button
@@ -511,13 +510,13 @@ const Projects = () => {
                 <span className="hidden sm:inline">Table</span>
               </button>
             </div>
-            {(IS_ADMIN || access.includes("export")) && (
+            {canExport && (
               <button onClick={exportToExcel}
                 className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600 font-semibold text-xs sm:text-sm transition-all shadow-sm flex-1 sm:flex-none justify-center">
                 <MdDownload size={16} /> Export
               </button>
             )}
-            {(IS_ADMIN || access.includes("add")) && (
+            {canAdd && (
               <Link to="/add-project"
                 className="flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-teal-500 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-xl hover:scale-[1.02] transition-all text-xs sm:text-sm flex-1 sm:flex-none justify-center">
                 <MdAdd size={17} /> Add Project
@@ -639,6 +638,9 @@ const Projects = () => {
                         onEdit={(id, isClient) => navigate(isClient ? `/edit-client/${id}` : `/edit-project/${id}`)}
                         onDelete={(id, isClient) => handleDelete(id, isClient)}
                         onStatusChange={handleStatusChange}
+                        canView={canView}
+                        canEdit={canEdit}
+                        canDelete={canDelete}
                       />
                     ))}
                   </div>
@@ -712,19 +714,19 @@ const Projects = () => {
                           </td>
                           <td className="py-3 px-3 sm:px-4">
                             <div className="flex items-center gap-1">
-                              {(IS_ADMIN || access.includes("view")) && (
+                              {canView && (
                                 <button onClick={() => navigate(p.recordType === 'client' ? `/client/${p._id}` : `/projects/${p._id}`)}
                                   className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-110 bg-teal-50 hover:bg-teal-100 text-teal-600" title="View">
                                   <MdVisibility size={15} />
                                 </button>
                               )}
-                              {(IS_ADMIN || access.includes("edit")) && (
+                              {canEdit && (
                                 <button onClick={() => navigate(p.recordType === 'client' ? `/edit-client/${p._id}` : `/edit-project/${p._id}`)}
                                   className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-110 bg-blue-50 hover:bg-blue-100 text-blue-600" title="Edit">
                                   <MdEdit size={15} />
                                 </button>
                               )}
-                              {(IS_ADMIN || access.includes("delete")) && (
+                              {canDelete && (
                                 <button onClick={() => handleDelete(p._id, p.recordType === 'client')}
                                   className="w-7 h-7 rounded-lg flex items-center justify-center transition-all hover:scale-110 bg-red-50 hover:bg-red-100 text-red-500" title="Delete">
                                   <MdDelete size={15} />

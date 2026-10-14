@@ -10,10 +10,22 @@ import {
   FaPrint, FaChartLine, FaUserTie, FaGlobe, FaBullhorn, FaChartBar
 } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
+import { API_BASE } from '../../utils/Auth';
 
-const API_URL = 'https://pmsbackend.pixelmindsolutions.com/api/projects';
-const adminDetails = JSON.parse(sessionStorage.getItem('adminDetails'));
-const AUTH_TOKEN = adminDetails?.token;
+const API_URL = `${API_BASE}/projects`;
+
+const getAuthHeaders = () => {
+  let loginDetails = null;
+  try {
+    loginDetails = JSON.parse(sessionStorage.getItem('loginDetails') || 'null');
+  } catch {
+    loginDetails = null;
+  }
+
+  return loginDetails?.token
+    ? { Authorization: `Bearer ${loginDetails.token}` }
+    : {};
+};
 
 const ProjectDetails = () => {
   const { id } = useParams();
@@ -29,7 +41,7 @@ const ProjectDetails = () => {
     try {
       setLoading(true);
       const res = await fetch(`${API_URL}/${id}`, {
-        headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+        headers: getAuthHeaders(),
       });
       const data = await res.json();
       if (data.success) {

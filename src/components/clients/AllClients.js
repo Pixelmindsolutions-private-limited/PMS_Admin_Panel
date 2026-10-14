@@ -17,9 +17,10 @@ import {
   FaMapMarkerAlt,
 } from "react-icons/fa";
 import * as XLSX from "xlsx";
+import { API_BASE } from "../../utils/Auth";
 
-const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/clients/all";
-const DELETE_URL = "https://pmsbackend.pixelmindsolutions.com/api/clients";
+const API_URL = `${API_BASE}/clients/all`;
+const DELETE_URL = `${API_BASE}/clients`;
 
 const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 

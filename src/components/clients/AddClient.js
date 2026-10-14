@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { UserPlus, X, CheckCircle, AlertCircle, Loader } from "lucide-react";
+import { API_BASE } from "../../utils/Auth";
 
-const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/clients";
+const API_URL = `${API_BASE}/clients`;
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;
 
@@ -200,7 +201,7 @@ const AddClient = () => {
           timer: 2000,
           timerProgressBar: true,
         }).then(() => {
-          navigate("/clients");
+          navigate("/allclients");
         });
       } else {
         let errorMsg = "Failed to create client.";
@@ -352,7 +353,7 @@ const AddClient = () => {
             </div>
           </div>
           <button
-            onClick={() => navigate("/clients")}
+            onClick={() => navigate("/allclients")}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-teal-300 text-gray-600 font-semibold text-sm hover:shadow-md transition-all w-full sm:w-auto"
           >
             ← Back
@@ -484,7 +485,7 @@ const AddClient = () => {
             <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100">
               <button
                 type="button"
-                onClick={() => navigate("/clients")}
+                onClick={() => navigate("/allclients")}
                 className="flex-1 sm:flex-none sm:w-32 py-3 rounded-xl border-2 border-gray-200 font-bold text-sm text-gray-600 hover:bg-gray-50 transition-all"
               >
                 Cancel

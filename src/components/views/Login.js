@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MdEmail, MdArrowBack } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../../utils/Auth';
 
 const Login = ({ onLogin }) => {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ const Login = ({ onLogin }) => {
     if (!formData.email) return;
     setLoading(true);
     try {
-      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/adminpanel/send-otp', {
+      const response = await fetch(`${API_BASE_URL}/adminpanel/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email }),
@@ -87,7 +88,7 @@ const Login = ({ onLogin }) => {
     setOtpLoading(true);
     setOtpError('');
     try {
-      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/adminpanel/verify-otp', {
+      const response = await fetch(`${API_BASE_URL}/adminpanel/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, otp: otpString }),
@@ -128,7 +129,7 @@ const Login = ({ onLogin }) => {
     setOtpError('');
     try {
       // Fixed: Use the same adminpanel endpoint as send-otp
-      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/adminpanel/send-otp', {
+      const response = await fetch(`${API_BASE_URL}/adminpanel/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email }),

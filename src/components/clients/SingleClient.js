@@ -3,8 +3,9 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { MdEdit, MdArrowBack, MdDownload, MdPhone, MdEmail, MdLocationOn, MdPerson, MdCancel, MdCheckCircle } from 'react-icons/md';
 import { FaUsers, FaCalendarAlt, FaTag } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
+import { API_BASE } from '../../utils/Auth';
 
-const API_URL = 'https://pmsbackend.pixelmindsolutions.com/api/clients';
+const API_URL = `${API_BASE}/clients`;
 const adminDetails = JSON.parse(sessionStorage.getItem('adminDetails'));
 const AUTH_TOKEN = adminDetails?.token;
 
@@ -157,7 +158,7 @@ const SingleClient = () => {
           <p className="text-5xl mb-4">⚠️</p>
           <h2 className="text-xl font-bold text-gray-800 mb-2">Client Not Found</h2>
           <p className="text-gray-500 text-sm mb-5">{error || 'This client does not exist.'}</p>
-          <button onClick={() => navigate('/clients')}
+          <button onClick={() => navigate('/allclients')}
             className="px-5 py-2.5 bg-teal-600 text-white rounded-xl font-semibold text-sm hover:bg-teal-700 transition-colors">
             Back to Clients
           </button>
@@ -191,7 +192,7 @@ const SingleClient = () => {
 
       <div className="w-full max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 no-print">
-          <button onClick={() => navigate('/clients')}
+          <button onClick={() => navigate('/allclients')}
             className="flex items-center gap-2 text-gray-600 hover:text-teal-700 font-medium text-sm transition-colors self-start">
             <MdArrowBack size={18} /> Back to Clients
           </button>

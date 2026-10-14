@@ -12,6 +12,7 @@ import SingleEmployeeLiveTrackerModal from './SingleEmployeeLiveTrackerModal';
 
 const WorkSessionReports = () => {
   const [reportData, setReportData] = useState([]);
+  const [reportError, setReportError] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'detailed'
@@ -48,124 +49,113 @@ const WorkSessionReports = () => {
     fetchEmployees();
   }, []);
 
-  // Fetch report data (with fallback to all-sessions aggregation)
+  // Fetch admin sessions and aggregate them into report rows.
   const fetchReport = async () => {
     setRefreshing(true);
+    setReportError("");
     try {
-      let fetchedReport = null;
+      let url = `${API_BASE_URL}/work-session/all-sessions?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&limit=500`;
+      if (employeeFilter) {
+        url += `&employeeId=${employeeFilter}`;
+      }
+      const response = await fetch(url, { headers: getAuthHeaders() });
+      const allData = await response.json();
 
-      // 1. Try dedicated admin report endpoint
-      try {
-        let url = `${API_BASE_URL}/work-session/admin/report?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
-        if (employeeFilter) {
-          url += `&employeeId=${employeeFilter}`;
-        }
-        const response = await fetch(url, { headers: getAuthHeaders() });
-        const data = await response.json();
-        if (data.success && Array.isArray(data.data)) {
-          fetchedReport = data.data;
-        }
-      } catch (_) {}
-
-      // 2. Fallback: Aggregate from all-sessions if backend report endpoint is not ready
-      if (!fetchedReport) {
-        let fallbackUrl = `${API_BASE_URL}/work-session/all-sessions?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&limit=500`;
-        if (employeeFilter) {
-          fallbackUrl += `&employeeId=${employeeFilter}`;
-        }
-        const resp = await fetch(fallbackUrl, { headers: getAuthHeaders() });
-        const allData = await resp.json();
-
-        if (allData.success && Array.isArray(allData.data?.sessions)) {
-          const sessions = allData.data.sessions;
-          const map = {};
-
-          sessions.forEach(s => {
-            const id = s.employeeId;
-            if (!map[id]) {
-              map[id] = {
-                employeeId: id,
-                employeeName: s.employeeName || 'Unknown',
-                totalSessions: 0,
-                totalWorkMinutes: 0,
-                totalBreakMinutes: 0,
-                totalIdleMinutes: 0,
-                lunchBreakMinutes: 0,
-                teaBreakMinutes: 0,
-                otherBreakMinutes: 0,
-                days: []
-              };
-            }
-
-            let lunchM = 0;
-            let teaM = 0;
-            let otherM = 0;
-
-            if (Array.isArray(s.breaks)) {
-              s.breaks.forEach(b => {
-                const dur = b.duration || (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / 60000 : 0);
-                const r = (b.reason || b.type || '').toLowerCase();
-                if (r.includes('lunch')) lunchM += dur;
-                else if (r.includes('tea')) teaM += dur;
-                else otherM += dur;
-              });
-            }
-
-            const workMin = s.totalWorkDuration || 0;
-            const breakMin = s.totalBreakDuration || 0;
-            const idleMin = s.totalIdleTime || 0;
-
-            map[id].totalSessions += 1;
-            map[id].totalWorkMinutes += workMin;
-            map[id].totalBreakMinutes += breakMin;
-            map[id].totalIdleMinutes += idleMin;
-            map[id].lunchBreakMinutes += lunchM;
-            map[id].teaBreakMinutes += teaM;
-            map[id].otherBreakMinutes += otherM;
-
-            map[id].days.push({
-              sessionId: s._id,
-              date: s.date,
-              startTime: s.startTime,
-              endTime: s.endTime,
-              status: s.status,
-              workMinutes: Math.round(workMin),
-              workHours: (workMin / 60).toFixed(2),
-              delayMinutes: Math.round(idleMin),
-              delayHours: (idleMin / 60).toFixed(2),
-              lunchMinutes: Math.round(lunchM),
-              teaMinutes: Math.round(teaM),
-              totalBreakMinutes: Math.round(breakMin),
-              totalBreakHours: (breakMin / 60).toFixed(2),
-              productivity: (workMin + breakMin) > 0 ? Math.round((workMin / (workMin + breakMin)) * 100) : 0
-            });
-          });
-
-          fetchedReport = Object.values(map).map(emp => {
-            const totalWorkHours = (emp.totalWorkMinutes / 60).toFixed(2);
-            const totalBreakHours = (emp.totalBreakMinutes / 60).toFixed(2);
-            const totalIdleHours = (emp.totalIdleMinutes / 60).toFixed(2);
-            const lunchBreakHours = (emp.lunchBreakMinutes / 60).toFixed(2);
-            const teaBreakHours = (emp.teaBreakMinutes / 60).toFixed(2);
-            const totalMinutes = emp.totalWorkMinutes + emp.totalBreakMinutes;
-            const productivity = totalMinutes > 0 ? Math.round((emp.totalWorkMinutes / totalMinutes) * 100) : 0;
-
-            return {
-              ...emp,
-              totalWorkHours,
-              totalBreakHours,
-              totalIdleHours,
-              lunchBreakHours,
-              teaBreakHours,
-              productivity
-            };
-          });
-        }
+      if (!response.ok || !allData.success) {
+        throw new Error(allData.message || "Failed to fetch work session reports");
+      }
+      if (!Array.isArray(allData.data?.sessions)) {
+        throw new Error("Work session report response has an invalid format");
       }
 
-      setReportData(fetchedReport || []);
+      const sessions = allData.data.sessions;
+      const map = {};
+
+      sessions.forEach(s => {
+        const id = s.employeeId;
+        if (!map[id]) {
+          map[id] = {
+            employeeId: id,
+            employeeName: s.employeeName || 'Unknown',
+            totalSessions: 0,
+            totalWorkMinutes: 0,
+            totalBreakMinutes: 0,
+            totalIdleMinutes: 0,
+            lunchBreakMinutes: 0,
+            teaBreakMinutes: 0,
+            otherBreakMinutes: 0,
+            days: []
+          };
+        }
+
+        let lunchM = 0;
+        let teaM = 0;
+        let otherM = 0;
+
+        if (Array.isArray(s.breaks)) {
+          s.breaks.forEach(b => {
+            const dur = b.duration || (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / 60000 : 0);
+            const r = (b.reason || b.type || '').toLowerCase();
+            if (r.includes('lunch')) lunchM += dur;
+            else if (r.includes('tea')) teaM += dur;
+            else otherM += dur;
+          });
+        }
+
+        const workMin = s.totalWorkDuration || 0;
+        const breakMin = s.totalBreakDuration || 0;
+        const idleMin = s.totalIdleTime || 0;
+
+        map[id].totalSessions += 1;
+        map[id].totalWorkMinutes += workMin;
+        map[id].totalBreakMinutes += breakMin;
+        map[id].totalIdleMinutes += idleMin;
+        map[id].lunchBreakMinutes += lunchM;
+        map[id].teaBreakMinutes += teaM;
+        map[id].otherBreakMinutes += otherM;
+
+        map[id].days.push({
+          sessionId: s._id,
+          date: s.date,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          status: s.status,
+          workMinutes: Math.round(workMin),
+          workHours: (workMin / 60).toFixed(2),
+          delayMinutes: Math.round(idleMin),
+          delayHours: (idleMin / 60).toFixed(2),
+          lunchMinutes: Math.round(lunchM),
+          teaMinutes: Math.round(teaM),
+          totalBreakMinutes: Math.round(breakMin),
+          totalBreakHours: (breakMin / 60).toFixed(2),
+          productivity: (workMin + breakMin) > 0 ? Math.round((workMin / (workMin + breakMin)) * 100) : 0
+        });
+      });
+
+      const fetchedReport = Object.values(map).map(emp => {
+        const totalWorkHours = (emp.totalWorkMinutes / 60).toFixed(2);
+        const totalBreakHours = (emp.totalBreakMinutes / 60).toFixed(2);
+        const totalIdleHours = (emp.totalIdleMinutes / 60).toFixed(2);
+        const lunchBreakHours = (emp.lunchBreakMinutes / 60).toFixed(2);
+        const teaBreakHours = (emp.teaBreakMinutes / 60).toFixed(2);
+        const totalMinutes = emp.totalWorkMinutes + emp.totalBreakMinutes;
+        const productivity = totalMinutes > 0 ? Math.round((emp.totalWorkMinutes / totalMinutes) * 100) : 0;
+
+        return {
+          ...emp,
+          totalWorkHours,
+          totalBreakHours,
+          totalIdleHours,
+          lunchBreakHours,
+          teaBreakHours,
+          productivity
+        };
+      });
+
+      setReportData(fetchedReport);
     } catch (error) {
       console.error("Error fetching report data:", error);
+      setReportError(error.message || "Failed to fetch work session reports");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -287,6 +277,13 @@ const WorkSessionReports = () => {
               Comprehensive report of working hours, delay/idle time, lunch and tea breaks, and productivity
             </p>
           </div>
+
+          {reportError && (
+            <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle size={16} />
+              <span>{reportError}</span>
+            </div>
+          )}
 
           <div className="flex gap-2.5">
             <button

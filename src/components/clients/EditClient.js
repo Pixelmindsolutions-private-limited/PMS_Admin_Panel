@@ -230,7 +230,7 @@ const EditClient = () => {
           timer: 2000,
           timerProgressBar: true,
         }).then(() => {
-          navigate("/clients");
+          navigate("/allclients");
         });
       } else {
         let errorMsg = "Failed to update client.";
@@ -381,7 +381,7 @@ const EditClient = () => {
             </div>
           </div>
           <button
-            onClick={() => navigate("/clients")}
+            onClick={() => navigate("/allclients")}
             className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-gray-200 hover:border-teal-300 text-gray-600 font-semibold text-sm hover:shadow-md transition-all w-full sm:w-auto"
           >
             ← Back

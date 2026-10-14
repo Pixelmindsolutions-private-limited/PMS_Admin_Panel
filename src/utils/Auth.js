@@ -27,43 +27,39 @@ export const API_BASE = "https://pmsbackend.pixelmindsolutions.com/api" ;
 
 export const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api" ;
 
+const getAuthToken = () => {
+  for (const key of ["loginDetails", "adminDetails"]) {
+    try {
+      const details = JSON.parse(sessionStorage.getItem(key) || "null");
+      if (details?.token) return details.token;
+    } catch (error) {
+      console.error(`Error reading ${key} from sessionStorage:`, error);
+    }
+  }
+
+  return null;
+};
 
 export const getAuthHeaders = () => {
-  try {
-    const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
-    const token = adminDetails?.token;
-    
-    if (!token) {
-      console.warn("No auth token found in sessionStorage");
-      return {};
-    }
-    
-    return {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    };
-  } catch (error) {
-    console.error("Error getting auth headers:", error);
+  const token = getAuthToken();
+
+  if (!token) {
+    console.warn("No auth token found in sessionStorage");
     return {};
   }
+
+  return {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  };
 };
 
 // Optional: Function to check if user is authenticated
 export const isAuthenticated = () => {
-  try {
-    const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
-    return !!adminDetails?.token;
-  } catch {
-    return false;
-  }
+  return !!getAuthToken();
 };
 
 // Optional: Function to get token
 export const getToken = () => {
-  try {
-    const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
-    return adminDetails?.token || null;
-  } catch {
-    return null;
-  }
+  return getAuthToken();
 };
