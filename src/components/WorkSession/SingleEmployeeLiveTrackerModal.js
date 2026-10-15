@@ -17,15 +17,21 @@ const SingleEmployeeLiveTrackerModal = ({
   const [sessionData, setSessionData] = useState(initialData || null);
   const [loading, setLoading] = useState(!initialData);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [activeTab, setActiveTab] = useState('tracker'); // 'tracker' | 'timeline' | 'breaks'
+  const [activeTab, setActiveTab] = useState('tracker');
 
   // Dynamic live second counters
   const [liveWorkingSeconds, setLiveWorkingSeconds] = useState(0);
   const [liveDelaySeconds, setLiveDelaySeconds] = useState(0);
+  const [liveLunchSeconds, setLiveLunchSeconds] = useState(0);
+  const [liveTeaSeconds, setLiveTeaSeconds] = useState(0);
+  const [liveOtherBreakSeconds, setLiveOtherBreakSeconds] = useState(0);
 
-  // Auto-refresh interval ref
+  // Refs
   const pollIntervalRef = useRef(null);
+  const requestIdRef = useRef(0); // ✅ prevent stale responses
+  const isMountedRef = useRef(true);
 
   // Sync currentEmpId prop changes
   useEffect(() => {
@@ -34,7 +40,7 @@ const SingleEmployeeLiveTrackerModal = ({
     }
   }, [employeeId]);
 
-  // Clock timer - updates every second
+  // Clock timer
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -42,104 +48,156 @@ const SingleEmployeeLiveTrackerModal = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch single employee live session data
+  // ✅ Cleanup on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    };
+  }, []);
+
+  // ✅ NEW: Fetch from /api/staff/tracking/:employeeId
   const fetchEmployeeData = async (empId, isPoll = false) => {
     if (!empId) return;
+
+    const thisRequestId = ++requestIdRef.current;
     if (!isPoll) setRefreshing(true);
 
     try {
-      // 1. Try dedicated single live endpoint or fallback to active-employees / all-sessions
-      let fetched = null;
-      try {
-        const res = await fetch(`${API_BASE_URL}/work-session/admin/employee-live/${empId}`, {
-          headers: getAuthHeaders()
-        });
-        const resData = await res.json();
-        if (resData.success && resData.data) {
-          fetched = resData.data;
-        }
-      } catch (err) {
-        // Fallback below
-      }
+      const url = `${API_BASE_URL}/staff/employee-sessions/${empId}`;
+      const res = await fetch(url, { headers: getAuthHeaders() });
 
-      // If dedicated endpoint is not yet active, fallback to active-employees query
-      if (!fetched) {
-        const activeRes = await fetch(`${API_BASE_URL}/work-session/active-employees`, {
-          headers: getAuthHeaders()
-        });
-        const activeJson = await activeRes.json();
-        if (activeJson.success && Array.isArray(activeJson.data)) {
-          const matched = activeJson.data.find(e => String(e.employeeId).toLowerCase() === String(empId).toLowerCase());
-          if (matched) {
-            fetched = matched;
-          }
-        }
-      }
+      // ✅ Prevent stale response from overwriting newer selection
+      if (thisRequestId !== requestIdRef.current) return;
+      if (!isMountedRef.current) return;
 
-      // If still not found, check all-sessions for today's session
-      if (!fetched) {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const histRes = await fetch(`${API_BASE_URL}/work-session/all-sessions?employeeId=${empId}&limit=5`, {
-          headers: getAuthHeaders()
-        });
-        const histJson = await histRes.json();
-        if (histJson.success && histJson.data?.sessions?.length > 0) {
-          const latest = histJson.data.sessions[0];
-          fetched = latest;
-        }
+      if (res.status === 401) throw new Error('Unauthorized. Please login again.');
+      if (res.status === 404) {
+        // No session found — reset to empty state
+        setSessionData(null);
+        setLiveWorkingSeconds(0);
+        setLiveDelaySeconds(0);
+        setError(null);
+        return;
       }
+      if (res.status === 500) throw new Error('Server error. Please try again.');
 
-      if (fetched) {
+      const data = await res.json();
+
+      if (data.success && data.data) {
+        const fetched = data.data;
+
+        // ✅ Parse formatted time strings "HH:MM:SS" → seconds
+        const parseHMS = (str) => {
+          if (!str || typeof str !== 'string') return null;
+          const parts = str.split(':').map(n => parseInt(n, 10) || 0);
+          if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+          if (parts.length === 2) return parts[0] * 60 + parts[1];
+          return null;
+        };
+
+        let workSec = parseHMS(fetched.workingTimeFormatted);
+        if (workSec === null) {
+          workSec = Math.round((fetched.totalWorkDuration || 0) * 60);
+        }
+
+        let delaySec = parseHMS(fetched.delayTimeFormatted);
+        if (delaySec === null) {
+          delaySec = Math.round((fetched.totalIdleTime || 0) * 60);
+        }
+
         setSessionData(fetched);
-        
-        // Calculate initial working seconds & delay seconds
-        const workSec = fetched.workingSeconds ?? Math.round((fetched.currentWorkDuration || fetched.totalWorkDuration || 0) * 60);
-        const delaySec = fetched.delaySeconds ?? Math.round((fetched.totalIdleTime || 0) * 60);
         setLiveWorkingSeconds(workSec);
         setLiveDelaySeconds(delaySec);
+        setLiveLunchSeconds(Math.round((fetched.lunchDuration || 0) * 60));
+        setLiveTeaSeconds(Math.round((fetched.teaDuration || 0) * 60));
+        setLiveOtherBreakSeconds(Math.round((fetched.otherBreakDuration || 0) * 60));
+        setError(null);
+      } else {
+        setSessionData(null);
+        setLiveWorkingSeconds(0);
+        setLiveDelaySeconds(0);
+        setLiveLunchSeconds(0);
+        setLiveTeaSeconds(0);
+        setLiveOtherBreakSeconds(0);
       }
-    } catch (error) {
-      console.error("Error fetching live employee data:", error);
+    } catch (err) {
+      if (thisRequestId !== requestIdRef.current) return;
+      if (!isMountedRef.current) return;
+      console.error('Error fetching tracking data:', err);
+      setError(err.message || 'Network error');
+      setSessionData(null);
+      setLiveWorkingSeconds(0);
+      setLiveDelaySeconds(0);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (thisRequestId === requestIdRef.current && isMountedRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
-  // Initial load and polling
+  // ✅ Initial load and polling — per employee
   useEffect(() => {
-    if (currentEmpId) {
-      fetchEmployeeData(currentEmpId, false);
-      
-      // Auto-refresh from server every 10 seconds
-      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = setInterval(() => {
-        fetchEmployeeData(currentEmpId, true);
-      }, 10000);
-    }
+    if (!currentEmpId) return;
+
+    // Reset for new employee immediately
+    setSessionData(null);
+    setLiveWorkingSeconds(0);
+    setLiveDelaySeconds(0);
+    setLiveLunchSeconds(0);
+    setLiveTeaSeconds(0);
+    setLiveOtherBreakSeconds(0);
+    setError(null);
+    setLoading(true);
+
+    fetchEmployeeData(currentEmpId, false);
+
+    // Auto-refresh every 10 seconds
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    pollIntervalRef.current = setInterval(() => {
+      fetchEmployeeData(currentEmpId, true);
+    }, 10000);
 
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, [currentEmpId]);
 
-  // Live second-by-second increment when status is working or idle
+  // Live second-by-second increment
   useEffect(() => {
     const status = String(sessionData?.status || '').toLowerCase();
-    if (status !== 'working' && status !== 'idle') return;
+    const activeBreak = sessionData?.activeBreak;
+    const activeType = String(activeBreak?.type || activeBreak?.reason || '').toLowerCase();
+
+    const isLunch = status === 'lunch_break' || ((status === 'on_break' || status === 'break') && activeType.includes('lunch')) || activeType.includes('lunch');
+    const isTea = status === 'tea_break' || ((status === 'on_break' || status === 'break') && activeType.includes('tea')) || activeType.includes('tea');
+    const isOnBreak = status === 'on_break' || status === 'lunch_break' || status === 'tea_break' || status === 'break' || Boolean(activeBreak);
+
+    if (status !== 'working' && status !== 'idle' && !isOnBreak) return;
 
     const ticker = setInterval(() => {
       if (status === 'working') {
         setLiveWorkingSeconds(prev => prev + 1);
       } else if (status === 'idle') {
         setLiveDelaySeconds(prev => prev + 1);
+      } else if (isOnBreak) {
+        setLiveDelaySeconds(prev => prev + 1);
+        if (isLunch) {
+          setLiveLunchSeconds(prev => prev + 1);
+        } else if (isTea) {
+          setLiveTeaSeconds(prev => prev + 1);
+        } else {
+          setLiveOtherBreakSeconds(prev => prev + 1);
+        }
       }
     }, 1000);
 
     return () => clearInterval(ticker);
-  }, [sessionData?.status]);
+  }, [sessionData?.status, sessionData?.activeBreak]);
 
-  // Format seconds to HH:MM:SS (Orbitron digital style)
+  // Format helpers
   const formatHMS = (totalSeconds) => {
     const s = Math.max(0, Math.floor(totalSeconds || 0));
     const hours = Math.floor(s / 3600);
@@ -155,42 +213,30 @@ const SingleEmployeeLiveTrackerModal = ({
     return `${minutes}m ${seconds}s`;
   };
 
-  // Break calculations
+  // ✅ Break metrics — now using API fields directly
   const breakMetrics = useMemo(() => {
-    let lunchSec = sessionData?.lunchTakenSec || 0;
-    let teaSec = sessionData?.teaTakenSec || 0;
-    let otherSec = sessionData?.otherBreakSec || 0;
-    const breakList = sessionData?.breaks || [];
+    const activeBreak = sessionData?.activeBreak;
+    const activeType = String(
+      activeBreak?.type ||
+      activeBreak?.reason ||
+      ''
+    ).toLowerCase();
 
-    if (lunchSec === 0 && Array.isArray(breakList)) {
-      breakList.forEach(b => {
-        const durSec = b.duration ? b.duration * 60 : (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / 1000 : 0);
-        const type = (b.reason || b.type || '').toLowerCase();
-        if (type.includes('lunch')) lunchSec += durSec;
-        else if (type.includes('tea')) teaSec += durSec;
-        else otherSec += durSec;
-      });
-    }
-
-    const currentBreakType = (sessionData?.breakInfo?.breakType || sessionData?.currentBreak?.reason || sessionData?.currentBreak?.type || '').toLowerCase();
-    const isLunchActive = sessionData?.status === 'on_break' && currentBreakType.includes('lunch');
-    const isTeaActive = sessionData?.status === 'on_break' && currentBreakType.includes('tea');
-    const isOtherBreakActive = sessionData?.status === 'on_break' && !isLunchActive && !isTeaActive;
+    const status = String(sessionData?.status || '').toLowerCase();
+    const isLunchActive = status === 'lunch_break' || ((status === 'on_break' || status === 'break') && activeType.includes('lunch')) || activeType.includes('lunch');
+    const isTeaActive = status === 'tea_break' || ((status === 'on_break' || status === 'break') && activeType.includes('tea')) || activeType.includes('tea');
+    const isOtherBreakActive = (status === 'on_break' || status === 'break' || Boolean(activeBreak)) && !isLunchActive && !isTeaActive;
 
     return {
-      lunchSec: Math.round(lunchSec),
-      teaSec: Math.round(teaSec),
-      otherSec: Math.round(otherSec),
       isLunchActive,
       isTeaActive,
       isOtherBreakActive,
-      breakList
+      breakList: sessionData?.breaks || [],
     };
   }, [sessionData]);
 
-  // Current employee information
+  // Current employee info
   const employeeName = sessionData?.employeeName || sessionData?.name || 'Employee';
-  const employeeRole = sessionData?.role || 'Staff Member';
   const status = String(sessionData?.status || 'not_started').toLowerCase();
   const location = sessionData?.location || 'Office';
 
@@ -210,11 +256,25 @@ const SingleEmployeeLiveTrackerModal = ({
             Idle
           </span>
         );
+      case 'lunch_break':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            Lunch Break
+          </span>
+        );
+      case 'tea_break':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+            Tea Break
+          </span>
+        );
       case 'on_break':
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 shadow-xs">
             <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            {sessionData?.breakInfo?.breakType ? `On ${sessionData.breakInfo.breakType}` : 'On Break'}
+            {sessionData?.activeBreak?.type ? `On ${sessionData.activeBreak.type}` : 'On Break'}
           </span>
         );
       case 'completed':
@@ -236,13 +296,11 @@ const SingleEmployeeLiveTrackerModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in overflow-y-auto">
-      {/* Tracker Card Container - replicating the desktop app aesthetic */}
       <div className="bg-white rounded-[32px] border border-slate-200/90 shadow-2xl p-5 sm:p-6 w-full max-w-[460px] relative overflow-hidden transition-all duration-300 my-auto">
-        
-        {/* TOP BAR / WINDOW CONTROLS */}
+
+        {/* TOP BAR */}
         <div className="flex justify-between items-center pb-3 mb-3 border-b border-slate-100">
           <div className="flex items-center gap-2.5 min-w-0">
-            {/* Logo / Avatar */}
             <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 flex items-center justify-center p-1.5 shadow-xs shrink-0">
               {sessionData?.profileImage ? (
                 <img src={sessionData.profileImage} alt={employeeName} className="w-full h-full rounded-xl object-cover" />
@@ -260,10 +318,9 @@ const SingleEmployeeLiveTrackerModal = ({
             </div>
           </div>
 
-          {/* Right Controls: Status & Close */}
           <div className="flex items-center gap-2 shrink-0">
             {getStatusBadge()}
-            
+
             <button
               onClick={() => fetchEmployeeData(currentEmpId, false)}
               title="Refresh live data"
@@ -284,7 +341,7 @@ const SingleEmployeeLiveTrackerModal = ({
           </div>
         </div>
 
-        {/* EMPLOYEE QUICK SWITCHER (ADMIN CAPABILITY) */}
+        {/* EMPLOYEE SWITCHER */}
         {allEmployees.length > 0 && (
           <div className="mb-3">
             <div className="relative">
@@ -311,7 +368,7 @@ const SingleEmployeeLiveTrackerModal = ({
           </div>
         )}
 
-        {/* BIG DIGITAL CLOCK DISPLAY (MATCHING SCREENSHOT) */}
+        {/* DIGITAL CLOCK */}
         <div className="text-center py-3 px-4 mb-3 bg-gradient-to-b from-slate-50/80 to-white border border-slate-200/80 rounded-2xl shadow-xs">
           <div className="font-digital font-extrabold text-3xl sm:text-4xl text-[#113f36] tracking-tight tabular-nums leading-none py-1">
             {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
@@ -321,7 +378,7 @@ const SingleEmployeeLiveTrackerModal = ({
           </p>
         </div>
 
-        {/* LOCATION SELECTOR / BADGE */}
+        {/* LOCATION */}
         <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3.5 py-2 mb-3 shadow-xs">
           <div className="flex items-center gap-2">
             <FiMapPin className="text-teal-600 text-sm" />
@@ -332,9 +389,8 @@ const SingleEmployeeLiveTrackerModal = ({
           </span>
         </div>
 
-        {/* LIVE TIMERS: WORKING TIME & DELAY TIME (SIDE-BY-SIDE IN MATCHING STYLES) */}
+        {/* LIVE TIMERS */}
         <div className="grid grid-cols-2 gap-2.5 mb-3.5">
-          {/* Working Time Card */}
           <div className="bg-white border border-teal-200/80 rounded-2xl p-3 text-center shadow-xs relative overflow-hidden group hover:border-teal-400 transition-all">
             <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-teal-700 flex items-center justify-center gap-1.5 mb-1">
               <span className={`w-2 h-2 rounded-full ${status === 'working' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
@@ -348,7 +404,6 @@ const SingleEmployeeLiveTrackerModal = ({
             </span>
           </div>
 
-          {/* Delay Time Card */}
           <div className={`bg-white border rounded-2xl p-3 text-center shadow-xs relative overflow-hidden transition-all ${
             status === 'idle' ? 'border-amber-400 ring-2 ring-amber-300/40 bg-amber-50/20' : 'border-slate-200'
           }`}>
@@ -367,7 +422,7 @@ const SingleEmployeeLiveTrackerModal = ({
           </div>
         </div>
 
-        {/* BREAK SUMMARY SECTION (EXACT OFFICE SCHEDULE MATCH) */}
+        {/* BREAK SUMMARY */}
         <div className="bg-white border border-slate-200 rounded-2xl p-3 sm:p-3.5 mb-3.5 shadow-xs">
           <div className="text-[11px] font-bold uppercase tracking-wider text-[#92400e] mb-2.5 flex items-center justify-between">
             <span className="flex items-center gap-1.5">
@@ -380,7 +435,7 @@ const SingleEmployeeLiveTrackerModal = ({
           </div>
 
           <div className="space-y-2">
-            {/* LUNCH ROW */}
+            {/* LUNCH */}
             <div className="flex items-center justify-between bg-white border border-amber-200/90 rounded-xl px-3 py-2 shadow-xs hover:bg-amber-50/20 transition-all">
               <div className="flex items-center gap-2">
                 <span className="text-base">🍱</span>
@@ -393,11 +448,12 @@ const SingleEmployeeLiveTrackerModal = ({
               <div>
                 {breakMetrics.isLunchActive ? (
                   <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-[11px] px-3 py-1 rounded-lg shadow-sm animate-pulse">
-                    Active Lunch 🍱
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    Active: {formatMS(liveLunchSeconds)} 🍱
                   </span>
-                ) : breakMetrics.lunchSec > 0 ? (
+                ) : liveLunchSeconds > 0 ? (
                   <span className="font-mono-num font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 text-[11px]">
-                    Taken: {formatMS(breakMetrics.lunchSec)}
+                    Taken: {formatMS(liveLunchSeconds)}
                   </span>
                 ) : (
                   <span className="bg-slate-100 text-slate-500 font-semibold text-[10px] px-2.5 py-1 rounded-lg border border-slate-200">
@@ -407,7 +463,7 @@ const SingleEmployeeLiveTrackerModal = ({
               </div>
             </div>
 
-            {/* TEA BREAK ROW */}
+            {/* TEA */}
             <div className="flex items-center justify-between bg-white border border-teal-200/90 rounded-xl px-3 py-2 shadow-xs hover:bg-teal-50/20 transition-all">
               <div className="flex items-center gap-2">
                 <span className="text-base">☕</span>
@@ -420,11 +476,12 @@ const SingleEmployeeLiveTrackerModal = ({
               <div>
                 {breakMetrics.isTeaActive ? (
                   <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-teal-500 to-teal-700 text-white font-bold text-[11px] px-3 py-1 rounded-lg shadow-sm animate-pulse">
-                    Active Tea ☕
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    Active: {formatMS(liveTeaSeconds)} ☕
                   </span>
-                ) : breakMetrics.teaSec > 0 ? (
+                ) : liveTeaSeconds > 0 ? (
                   <span className="font-mono-num font-bold text-teal-800 bg-teal-50 px-2.5 py-1 rounded-lg border border-teal-200 text-[11px]">
-                    Taken: {formatMS(breakMetrics.teaSec)}
+                    Taken: {formatMS(liveTeaSeconds)}
                   </span>
                 ) : (
                   <span className="bg-slate-100 text-slate-500 font-semibold text-[10px] px-2.5 py-1 rounded-lg border border-slate-200">
@@ -434,7 +491,7 @@ const SingleEmployeeLiveTrackerModal = ({
               </div>
             </div>
 
-            {/* OTHER / CUSTOM BREAKS (IF ANY RECORDED) */}
+            {/* OTHER */}
             {breakMetrics.otherSec > 0 && (
               <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs">
                 <div className="flex items-center gap-2 text-slate-600 font-medium text-[11px]">
@@ -448,7 +505,7 @@ const SingleEmployeeLiveTrackerModal = ({
           </div>
         </div>
 
-        {/* TABS: SUMMARY INFO vs ACTIVITY TIMELINE */}
+        {/* TABS */}
         <div className="border-t border-slate-100 pt-3">
           <div className="flex gap-2 mb-2.5">
             <button
@@ -471,7 +528,7 @@ const SingleEmployeeLiveTrackerModal = ({
                   : 'text-slate-500 hover:bg-slate-50'
               }`}
             >
-              Activity Logs ({sessionData?.activityLogs?.length || 0})
+              Activity Logs ({sessionData?.activityLogCount ?? sessionData?.activityLogs?.length ?? 0})
             </button>
           </div>
 
@@ -492,7 +549,7 @@ const SingleEmployeeLiveTrackerModal = ({
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">Total Breaks Taken:</span>
                 <span className="font-bold text-slate-800">
-                  {sessionData?.breaks?.length || 0} times ({formatMS((breakMetrics.lunchSec + breakMetrics.teaSec + breakMetrics.otherSec))})
+                  {sessionData?.totalBreakCount ?? breakMetrics.breakList.length} times ({formatMS((breakMetrics.lunchSec + breakMetrics.teaSec + breakMetrics.otherSec))})
                 </span>
               </div>
               {sessionData?.endTime && (
@@ -525,7 +582,7 @@ const SingleEmployeeLiveTrackerModal = ({
           )}
         </div>
 
-        {/* FOOTER NOTICE / STATUS */}
+        {/* FOOTER */}
         <div className="mt-3.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
           <span className="flex items-center gap-1.5 text-teal-700 font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse" />

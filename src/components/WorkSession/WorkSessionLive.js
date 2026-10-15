@@ -93,16 +93,20 @@ const WorkSessionLive = () => {
 
       // Calculate break breakdown (lunch, tea, delay) on each employee
       const enriched = employees.map(emp => {
-        let lunchSec = emp.lunchTakenSec || 0;
-        let teaSec = emp.teaTakenSec || 0;
-        let otherSec = emp.otherBreakSec || 0;
+        let lunchSec = emp.lunchTakenSec ?? (emp.lunchDuration ? emp.lunchDuration * 60 : 0);
+        let teaSec = emp.teaTakenSec ?? (emp.teaDuration ? emp.teaDuration * 60 : 0);
+        let otherSec = emp.otherBreakSec ?? 0;
 
-        if (Array.isArray(emp.breaks)) {
+        if (!emp.lunchTakenSec && !emp.teaTakenSec && Array.isArray(emp.breaks)) {
           emp.breaks.forEach(b => {
-            const durSec = b.duration ? b.duration * 60 : (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / 1000 : 0);
-            const r = (b.reason || b.type || '').toLowerCase();
+            const durSec = b.duration
+              ? b.duration * 60
+              : (b.startTime
+                ? Math.max(0, Math.floor(((b.endTime ? new Date(b.endTime) : new Date()) - new Date(b.startTime)) / 1000))
+                : 0);
+            const r = String(b.reason || b.type || '').toLowerCase();
             if (r.includes('lunch')) lunchSec += durSec;
-            else if (r.includes('tea')) teaSec += durSec;
+            else if (r.includes('tea') || r.includes('refresh')) teaSec += durSec;
             else otherSec += durSec;
           });
         }
@@ -150,21 +154,41 @@ const WorkSessionLive = () => {
     return () => clearInterval(interval);
   }, [autoRefreshInterval, paramEmployeeId]);
 
-  // Live second increment for all currently working & idle employees
+  // Live second increment for working, idle, lunch, tea & other breaks
   useEffect(() => {
     const ticker = setInterval(() => {
       setActiveEmployees(prevList =>
         prevList.map(emp => {
-          if (emp.status === 'working') {
+          const status = String(emp.status || '').toLowerCase();
+          const activeType = String(
+            emp.activeBreak?.type ||
+            emp.activeBreak?.reason ||
+            emp.breakInfo?.breakType ||
+            ''
+          ).toLowerCase();
+
+          const isLunch = status === 'lunch_break' || ((status === 'on_break' || status === 'break') && activeType.includes('lunch')) || activeType.includes('lunch');
+          const isTea = status === 'tea_break' || ((status === 'on_break' || status === 'break') && activeType.includes('tea')) || activeType.includes('tea');
+          const isOnBreak = status === 'on_break' || status === 'lunch_break' || status === 'tea_break' || status === 'break';
+
+          if (status === 'working') {
             return {
               ...emp,
               workingSeconds: (emp.workingSeconds || 0) + 1,
               currentWorkDuration: ((emp.workingSeconds || 0) + 1) / 60
             };
-          } else if (emp.status === 'idle') {
+          } else if (status === 'idle') {
             return {
               ...emp,
               delaySeconds: (emp.delaySeconds || 0) + 1
+            };
+          } else if (isOnBreak) {
+            return {
+              ...emp,
+              delaySeconds: (emp.delaySeconds || 0) + 1,
+              lunchTakenSec: isLunch ? (emp.lunchTakenSec || 0) + 1 : (emp.lunchTakenSec || 0),
+              teaTakenSec: isTea ? (emp.teaTakenSec || 0) + 1 : (emp.teaTakenSec || 0),
+              otherBreakSec: (!isLunch && !isTea) ? (emp.otherBreakSec || 0) + 1 : (emp.otherBreakSec || 0)
             };
           }
           return emp;
@@ -207,7 +231,7 @@ const WorkSessionLive = () => {
   const stats = useMemo(() => {
     const working = activeEmployees.filter(e => e.status === 'working').length;
     const idle = activeEmployees.filter(e => e.status === 'idle').length;
-    const onBreak = activeEmployees.filter(e => e.status === 'on_break').length;
+    const onBreak = activeEmployees.filter(e => ['on_break', 'lunch_break', 'tea_break'].includes(e.status)).length;
     const completed = activeEmployees.filter(e => e.status === 'completed').length;
     return {
       total: activeEmployees.length,
@@ -232,6 +256,20 @@ const WorkSessionLive = () => {
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-xs">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
             Idle / Delay
+          </span>
+        );
+      case 'lunch_break':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            Lunch Break
+          </span>
+        );
+      case 'tea_break':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+            Tea Break
           </span>
         );
       case 'on_break':
@@ -431,7 +469,15 @@ const WorkSessionLive = () => {
             {filteredEmployees.map((emp) => {
               const isWorking = emp.status === 'working';
               const isIdle = emp.status === 'idle';
-              const isOnBreak = emp.status === 'on_break';
+              const activeType = String(
+                emp.activeBreak?.type ||
+                emp.activeBreak?.reason ||
+                emp.breakInfo?.breakType ||
+                ''
+              ).toLowerCase();
+              const isLunchActive = emp.status === 'lunch_break' || ((emp.status === 'on_break' || emp.status === 'break') && activeType.includes('lunch')) || activeType.includes('lunch');
+              const isTeaActive = emp.status === 'tea_break' || ((emp.status === 'on_break' || emp.status === 'break') && activeType.includes('tea')) || activeType.includes('tea');
+              const isOnBreak = emp.status === 'on_break' || emp.status === 'lunch_break' || emp.status === 'tea_break' || emp.status === 'break';
 
               return (
                 <div
@@ -516,7 +562,12 @@ const WorkSessionLive = () => {
                         <span className="text-slate-600 flex items-center gap-1 text-[11px]">
                           <span>🍱</span> Lunch Break:
                         </span>
-                        {emp.lunchTakenSec > 0 ? (
+                        {isLunchActive ? (
+                          <span className="font-mono-num font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded text-[10px] border border-amber-300 animate-pulse flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping" />
+                            Active: {formatMS(emp.lunchTakenSec)}
+                          </span>
+                        ) : emp.lunchTakenSec > 0 ? (
                           <span className="font-mono-num font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] border border-emerald-200">
                             Taken: {formatMS(emp.lunchTakenSec)}
                           </span>
@@ -529,7 +580,12 @@ const WorkSessionLive = () => {
                         <span className="text-slate-600 flex items-center gap-1 text-[11px]">
                           <span>☕</span> Tea Break:
                         </span>
-                        {emp.teaTakenSec > 0 ? (
+                        {isTeaActive ? (
+                          <span className="font-mono-num font-bold text-teal-800 bg-teal-100 px-2 py-0.5 rounded text-[10px] border border-teal-300 animate-pulse flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-600 animate-ping" />
+                            Active: {formatMS(emp.teaTakenSec)}
+                          </span>
+                        ) : emp.teaTakenSec > 0 ? (
                           <span className="font-mono-num font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded text-[10px] border border-teal-200">
                             Taken: {formatMS(emp.teaTakenSec)}
                           </span>

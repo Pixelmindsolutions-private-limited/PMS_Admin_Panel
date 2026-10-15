@@ -113,38 +113,38 @@ const ALL_MENU_ITEMS = [
       { path: '/projects', label: 'Project List', icon: <MdListAlt />, description: 'All projects', access: 'view' },
     ],
   },
-  {
-    id: 'installments',
-    label: 'Installments',
-    icon: <MdFolder />,
-    description: 'Leads',
-    moduleKey: 'installments',
-    submenu: [
-      { path: '/add-installment', label: 'Installments', icon: <MdAddCircleOutline />, description: 'Create Lead', access: 'view' },
-    ],
-  },
-  {
-    id: 'assigned-works',
-    label: 'Work Allocation',
-    icon: <MdAssignment />,
-    description: 'Tasks & assignments',
-    moduleKey: 'assigned-works',
-    submenu: [
-      { path: '/add-worksheet', label: 'New Worksheet', icon: <MdAddCircleOutline />, description: 'Assign work', access: 'manage' },
-      { path: '/assigned-works', label: 'All Worksheets', icon: <MdListAlt />, description: 'View assignments', access: 'view' },
-    ],
-  },
-  {
-    id: 'attendance',
-    label: 'Attendance',
-    icon: <MdSchedule />,
-    description: 'Time tracking',
-    moduleKey: 'attendance',
-    submenu: [
-      { path: '/add-attendance', label: 'Mark Attendance', icon: <MdAddCircleOutline />, description: 'Daily entry', access: 'manage' },
-      { path: '/attendance', label: 'Attendance Log', icon: <MdListAlt />, description: 'History', access: 'view' },
-    ],
-  },
+  // {
+  //   id: 'installments',
+  //   label: 'Installments',
+  //   icon: <MdFolder />,
+  //   description: 'Leads',
+  //   moduleKey: 'installments',
+  //   submenu: [
+  //     { path: '/add-installment', label: 'Installments', icon: <MdAddCircleOutline />, description: 'Create Lead', access: 'view' },
+  //   ],
+  // },
+  // {
+  //   id: 'assigned-works',
+  //   label: 'Work Allocation',
+  //   icon: <MdAssignment />,
+  //   description: 'Tasks & assignments',
+  //   moduleKey: 'assigned-works',
+  //   submenu: [
+  //     { path: '/add-worksheet', label: 'New Worksheet', icon: <MdAddCircleOutline />, description: 'Assign work', access: 'manage' },
+  //     { path: '/assigned-works', label: 'All Worksheets', icon: <MdListAlt />, description: 'View assignments', access: 'view' },
+  //   ],
+  // },
+  // {
+  //   id: 'attendance',
+  //   label: 'Attendance',
+  //   icon: <MdSchedule />,
+  //   description: 'Time tracking',
+  //   moduleKey: 'attendance',
+  //   submenu: [
+  //     { path: '/add-attendance', label: 'Mark Attendance', icon: <MdAddCircleOutline />, description: 'Daily entry', access: 'manage' },
+  //     { path: '/attendance', label: 'Attendance Log', icon: <MdListAlt />, description: 'History', access: 'view' },
+  //   ],
+  // },
   {
     id: 'work-session',
     label: 'Work Session',
@@ -154,20 +154,20 @@ const ALL_MENU_ITEMS = [
     submenu: [
       // { path: '/work-session-live', label: 'Live Tracking', icon: <MdAccessTime />, description: 'Real-time status', access: 'view' },
       { path: '/work-session-history', label: 'Session History', icon: <MdTimer />, description: 'View records', access: 'view' },
-      { path: '/work-session-reports', label: 'Work Reports', icon: <MdTrendingUp />, description: 'Analytics', access: 'view' },
+      // { path: '/work-session-reports', label: 'Work Reports', icon: <MdTrendingUp />, description: 'Analytics', access: 'view' },
     ],
   },
-  {
-    id: 'invoice',
-    label: 'Invoicing',
-    icon: <MdFolder />,
-    description: 'Billing & payments',
-    moduleKey: 'invoice',
-    submenu: [
-      { path: '/create-invoice', label: 'Create Invoice', icon: <MdAddCircleOutline />, description: 'New invoice', access: 'manage' },
-      { path: '/invoices', label: 'Invoice List', icon: <MdListAlt />, description: 'All invoices', access: 'view' },
-    ],
-  },
+  // {
+  //   id: 'invoice',
+  //   label: 'Invoicing',
+  //   icon: <MdFolder />,
+  //   description: 'Billing & payments',
+  //   moduleKey: 'invoice',
+  //   submenu: [
+  //     { path: '/create-invoice', label: 'Create Invoice', icon: <MdAddCircleOutline />, description: 'New invoice', access: 'manage' },
+  //     { path: '/invoices', label: 'Invoice List', icon: <MdListAlt />, description: 'All invoices', access: 'view' },
+  //   ],
+  // },
 ];
 
 const BOTTOM_MENU_ITEMS = [
