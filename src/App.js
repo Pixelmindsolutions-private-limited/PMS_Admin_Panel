@@ -27,7 +27,6 @@ import ProjectDetails from './components/Projects/SingleProject';
 import AdvancedInvoice from './components/Invoice/AdvaceInvoiceGenerator';
 import WorkSessionLive from './components/WorkSession/WorkSessionLive';
 import WorkSessionHistory from './components/WorkSession/WorkSessionHistory';
-import WorkSessionReports from './components/WorkSession/WorkSessionReports';
 import AddClient from './components/clients/AddClient';
 import EditClient from './components/clients/EditClient';
 import AllClients from './components/clients/AllClients';
@@ -40,6 +39,7 @@ import DigitalMarketingPlans from './components/views/DigitalMarketingPlans';
 import CompanyInfo from './components/views/CampanyInfo';
 import SingleStaffAttendance from './components/Attendance/SingleStaffAttendance';
 import EditInvoice from './components/Invoice/EditInvoice';
+import EmployeeSalaryReport from './components/WorkSession/EmployeeAttendanceReport';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
@@ -100,7 +100,7 @@ function App() {
         {/* <Route path="work-session-live" element={<WorkSessionLive />} /> */}
         <Route path="work-session-live/:employeeId" element={<WorkSessionLive />} />
         <Route path="work-session-history" element={<WorkSessionHistory />} />
-        <Route path="work-session-reports" element={<WorkSessionReports />} />
+        <Route path="work-session-reports" element={<EmployeeSalaryReport />} />
 
         <Route path="create-invoice" element={<CreateInvoice />} />
         <Route path="invoices" element={<ShowInvoices />} />

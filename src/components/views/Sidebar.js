@@ -154,7 +154,7 @@ const ALL_MENU_ITEMS = [
     submenu: [
       // { path: '/work-session-live', label: 'Live Tracking', icon: <MdAccessTime />, description: 'Real-time status', access: 'view' },
       { path: '/work-session-history', label: 'Session History', icon: <MdTimer />, description: 'View records', access: 'view' },
-      // { path: '/work-session-reports', label: 'Work Reports', icon: <MdTrendingUp />, description: 'Analytics', access: 'view' },
+      { path: '/work-session-reports', label: 'Work Reports', icon: <MdTrendingUp />, description: 'Analytics', access: 'view' },
     ],
   },
   // {
