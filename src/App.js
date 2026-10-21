@@ -39,7 +39,7 @@ import DigitalMarketingPlans from './components/views/DigitalMarketingPlans';
 import CompanyInfo from './components/views/CampanyInfo';
 import SingleStaffAttendance from './components/Attendance/SingleStaffAttendance';
 import EditInvoice from './components/Invoice/EditInvoice';
-import EmployeeSalaryReport from './components/WorkSession/EmployeeAttendanceReport';
+import EmployeeSalaryReport from './components/WorkSession/EmployeeSalaryReport';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
