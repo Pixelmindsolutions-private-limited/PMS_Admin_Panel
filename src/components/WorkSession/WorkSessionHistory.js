@@ -154,8 +154,19 @@ const WorkSessionHistory = () => {
   // ✅ Enrich each session with tracking data
   const enrichWithTracking = async (list) => {
     try {
-      // Unique employee IDs
-      const uniqueEmpIds = [...new Set(list.map(s => s.employeeId))];
+      // Only today's sessions can use the employee's live tracking data.
+      const todayIST = getTodayIST();
+      const todaySessions = list.filter(s => {
+        if (!s.date) return false;
+        const sessionDateIST = new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Asia/Kolkata',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+        }).format(new Date(s.date));
+        return sessionDateIST === todayIST;
+      });
+      const uniqueEmpIds = [...new Set(todaySessions.map(s => s.employeeId))];
 
       // Parallel fetch from /api/staff/tracking/:employeeId
       const trackingResults = await Promise.all(
@@ -181,6 +192,16 @@ const WorkSessionHistory = () => {
 
       // Enrich each session
       const enriched = list.map(s => {
+        const sessionDateIST = s.date
+          ? new Intl.DateTimeFormat('en-CA', {
+              timeZone: 'Asia/Kolkata',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            }).format(new Date(s.date))
+          : null;
+        if (sessionDateIST !== todayIST) return s;
+
         const t = trackingMap[s.employeeId];
         if (!t) return s;
 
@@ -245,7 +266,15 @@ const WorkSessionHistory = () => {
         if (!prevList || prevList.length === 0) return prevList;
         let changed = false;
         const nextList = prevList.map(session => {
-          if (session.status === 'completed' || session.endTime) return session;
+          const sessionDateIST = session.date
+            ? new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Kolkata',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+              }).format(new Date(session.date))
+            : null;
+          if (sessionDateIST !== getTodayIST() || session.status === 'completed' || session.endTime) return session;
 
           const status = String(session.status || '').toLowerCase();
           const isLunch = status === 'lunch_break';
