@@ -3,8 +3,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import logo from '../../assets/logo1.png';
 import { 
-  Download, PlusCircle, Trash2, Eye, FileText, 
-  Search, ChevronLeft, ChevronRight, CheckCircle, Clock
+  Download, PlusCircle, Trash2, FileText, X
 } from "lucide-react";
 
 const inputClass =
@@ -33,19 +32,20 @@ const CreateInvoice = () => {
   const [message, setMessage] = useState({ type: "", text: "" });
   const [validationError, setValidationError] = useState("");
 
-  // Invoice List State
-  const [invoices, setInvoices] = useState([]);
-  const [loadingInvoices, setLoadingInvoices] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  // Generated invoice PDF preview state
+  const [previewInvoice, setPreviewInvoice] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState("");
 
-  // Fetch Projects & Invoices on Mount
+  // Fetch projects on mount
   useEffect(() => {
     fetchProjects();
-    fetchInvoices();
   }, []);
+
+  useEffect(() => () => {
+    if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   const fetchProjects = async () => {
     try {
@@ -59,17 +59,47 @@ const CreateInvoice = () => {
     }
   };
 
-  const fetchInvoices = async () => {
-    setLoadingInvoices(true);
+  const closePreview = () => {
+    if (previewUrl) window.URL.revokeObjectURL(previewUrl);
+    setPreviewUrl("");
+    setPreviewInvoice(null);
+    setPreviewLoading(false);
+    setPreviewError("");
+  };
+
+  const downloadPreview = () => {
+    if (!previewUrl || !previewInvoice) return;
+    const link = document.createElement("a");
+    link.href = previewUrl;
+    link.download = `${previewInvoice.invoiceNumber || `invoice-${previewInvoice.id}`}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const fetchInvoicePreview = async (invoice) => {
+    setPreviewInvoice(invoice);
+    setPreviewUrl("");
+    setPreviewError("");
+    setPreviewLoading(true);
     try {
-      const res = await axios.get(`${API_BASE_URL}/invoices`);
-      if (res.data.success) {
-        setInvoices(res.data.data || []);
-      }
+      const response = await axios.get(
+        `${API_BASE_URL}/manual-invoices/${invoice.id}/download`,
+        { responseType: "blob" }
+      );
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      setPreviewUrl(window.URL.createObjectURL(blob));
     } catch (error) {
-      console.error("Error fetching invoices:", error);
+      let detail = error.response?.data?.message;
+      if (!detail && error.response?.data instanceof Blob) {
+        try {
+          const body = JSON.parse(await error.response.data.text());
+          detail = body.message;
+        } catch (_) { /* Use the general error below. */ }
+      }
+      setPreviewError(detail || "The invoice was created, but its PDF could not be generated. Please try again from the invoices page.");
     } finally {
-      setLoadingInvoices(false);
+      setPreviewLoading(false);
     }
   };
 
@@ -106,6 +136,7 @@ const CreateInvoice = () => {
         title: `Installment ${existingInstallments.length + prev.length + 1}`,
         type: "amount",
         value: "",
+        sacCode: "",
         gstPercent: 0,
         sgstPercent: 0,
         dueDate: new Date().toISOString().split('T')[0],
@@ -155,7 +186,7 @@ const CreateInvoice = () => {
     }
 
     setSaving(true);
-    const savedInstallmentIds = [];
+    const savedInvoices = [];
     let hasSaveErrors = false;
 
     try {
@@ -166,6 +197,7 @@ const CreateInvoice = () => {
             title: row.title,
             type: row.type,
             value: Number(row.value),
+            sacCode: row.sacCode || "",
             gstPercent: Number(row.gstPercent) || 0,
             sgstPercent: Number(row.sgstPercent) || 0,
             dueDate: row.dueDate,
@@ -178,23 +210,20 @@ const CreateInvoice = () => {
             payload
           );
           
-          // Extract ID intelligently from response
-          let newInstId = null;
-          if (res.data.data?.installments) {
-            const insts = res.data.data.installments;
-            newInstId = insts[insts.length - 1]._id;
-          } else if (res.data.data?.installment?._id) {
-             newInstId = res.data.data.installment._id;
-          } else if (res.data.data?._id) {
-             newInstId = res.data.data._id;
-          } else if (res.data.installmentId) {
-             newInstId = res.data.installmentId;
-          }
+          const data = res.data?.data || res.data || {};
+          const installment = data.installment || (Array.isArray(data.installments) ? data.installments[data.installments.length - 1] : null);
+          const invoice = data.invoice || data.createdInvoice || installment?.invoice ||
+            (typeof installment?.invoiceId === "object" ? installment.invoiceId : null);
+          const invoiceId = invoice?._id || invoice?.id ||
+            (typeof data.invoiceId === "object" ? data.invoiceId?._id : data.invoiceId) ||
+            (typeof installment?.invoiceId === "object" ? installment.invoiceId?._id : installment?.invoiceId);
+          const invoiceNumber = invoice?.invoiceNumber || data.invoiceNumber ||
+            (typeof data.invoiceId === "object" ? data.invoiceId?.invoiceNumber : "");
 
-          if (newInstId) {
-            savedInstallmentIds.push(newInstId);
+          if (invoiceId) {
+            savedInvoices.push({ id: String(invoiceId), invoiceNumber });
           } else {
-            console.warn("Could not extract ID from:", res.data);
+            console.warn("Installment saved without an invoice ID in response:", res.data);
             hasSaveErrors = true;
           }
         } catch (err) {
@@ -203,17 +232,17 @@ const CreateInvoice = () => {
         }
       }
 
-      if (savedInstallmentIds.length === 0) {
+      if (savedInvoices.length === 0) {
         throw new Error("All installments failed to save. Check backend logs.");
       }
 
       setMessage({
         type: "success",
-        text: `Successfully saved ${savedInstallmentIds.length} installments. ${hasSaveErrors ? 'Some installments failed to save.' : ''}`
+        text: `Successfully created ${savedInvoices.length} invoice${savedInvoices.length === 1 ? "" : "s"}. ${hasSaveErrors ? "Some installments failed or returned no invoice ID." : ""}`
       });
 
       setInstallmentRows([]);
-      fetchProjects();
+      await fetchInvoicePreview(savedInvoices[savedInvoices.length - 1]);
 
       // Refresh selected project data
       const updatedProjRes = await axios.get(`${API_BASE_URL}/projects/all`);
@@ -230,34 +259,6 @@ const CreateInvoice = () => {
       setSaving(false);
     }
   };
-
-  // Invoice Table Handlers
-  const handleStatusChange = async (invoiceId, newStatus) => {
-    try {
-      await axios.patch(`${API_BASE_URL}/invoices/${invoiceId}/status`, { status: newStatus });
-      setInvoices(prev => prev.map(inv => inv._id === invoiceId ? { ...inv, status: newStatus } : inv));
-    } catch (error) {
-      alert("Failed to update status.");
-    }
-  };
-
-  // Filter & Pagination Logic
-  const filteredInvoices = invoices.filter(inv => {
-    const matchesSearch = 
-      (inv.invoiceNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (inv.installmentTitle || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (inv.projectId?.projectName || "").toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || inv.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
-  const paginatedInvoices = filteredInvoices.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-10">
@@ -385,7 +386,17 @@ const CreateInvoice = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
+                        <div>
+                          <label className="block text-xs font-semibold mb-1">SAC Code</label>
+                          <input
+                            type="text"
+                            value={row.sacCode || ""}
+                            onChange={(e) => handleRowChange(row.id, "sacCode", e.target.value)}
+                            className={inputClass}
+                            placeholder="Enter SAC Code"
+                          />
+                        </div>
                         <div>
                           <label className="block text-xs font-semibold mb-1">GST %</label>
                           <input type="number" value={row.gstPercent} onChange={(e) => handleRowChange(row.id, 'gstPercent', e.target.value)} className={inputClass} min="0" />
@@ -437,127 +448,34 @@ const CreateInvoice = () => {
           </div>
         )}
 
-        {/* EXISTING INVOICES TABLE */}
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <h2 className="text-lg font-bold text-slate-800">Generated Invoices</h2>
-            
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <div className="relative flex-1 md:w-64">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search invoices..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full h-10 pl-9 pr-3 rounded-xl border border-slate-300 text-sm focus:border-teal-500 outline-none"
-                />
+      </div>
+
+      {previewInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3 sm:p-6" role="dialog" aria-modal="true" aria-label="Invoice PDF preview">
+          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-4 py-3 sm:px-6">
+              <div>
+                <h2 className="font-bold text-slate-800">Invoice Preview</h2>
+                <p className="text-sm text-slate-500">{previewInvoice.invoiceNumber || "Generated invoice"}</p>
               </div>
-              <select 
-                value={statusFilter} 
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="h-10 px-3 rounded-xl border border-slate-300 text-sm focus:border-teal-500 outline-none cursor-pointer"
-              >
-                <option value="all">All Statuses</option>
-                <option value="generated">Generated</option>
-                <option value="sent">Sent</option>
-                <option value="paid">Paid</option>
-                <option value="overdue">Overdue</option>
-              </select>
+              <button type="button" onClick={closePreview} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close preview"><X size={20} /></button>
+            </div>
+            <div className="flex min-h-0 flex-1 items-center justify-center bg-slate-100 p-3">
+              {previewLoading ? (
+                <div className="text-center text-slate-600" role="status"><div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-teal-600 border-t-transparent" />Generating and loading invoice PDF…</div>
+              ) : previewError ? (
+                <div className="max-w-lg rounded-xl border border-red-200 bg-red-50 p-5 text-center text-sm text-red-700">{previewError}</div>
+              ) : previewUrl ? (
+                <iframe title="Generated invoice PDF" src={previewUrl} className="h-full w-full rounded-lg border-0 bg-white" />
+              ) : null}
+            </div>
+            <div className="flex justify-end gap-3 border-t border-slate-200 px-4 py-3 sm:px-6">
+              <button type="button" onClick={closePreview} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Close Preview</button>
+              <button type="button" onClick={downloadPreview} disabled={!previewUrl} className="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-50"><Download size={16} />Download PDF</button>
             </div>
           </div>
-          
-          {loadingInvoices ? (
-            <div className="text-center py-8 text-slate-500">Loading invoices...</div>
-          ) : filteredInvoices.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">No invoices found.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left whitespace-nowrap">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
-                  <tr>
-                    <th className="p-3 font-semibold">Invoice No</th>
-                    <th className="p-3 font-semibold">Project</th>
-                    <th className="p-3 font-semibold">Installment</th>
-                    <th className="p-3 font-semibold text-right">Principal</th>
-                    <th className="p-3 font-semibold text-right">Tax</th>
-                    <th className="p-3 font-semibold text-right">Total</th>
-                    <th className="p-3 font-semibold">Due Date</th>
-                    <th className="p-3 font-semibold text-center">Status</th>
-                    <th className="p-3 font-semibold text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {paginatedInvoices.map((inv) => (
-                    <tr key={inv._id} className="hover:bg-slate-50">
-                      <td className="p-3 font-bold text-teal-600">{inv.invoiceNumber}</td>
-                      <td className="p-3 text-slate-700">
-                        <div className="font-semibold">{inv.projectId?.projectName || "N/A"}</div>
-                        <div className="text-[10px] text-slate-400">{inv.projectId?.projectId}</div>
-                      </td>
-                      <td className="p-3 text-slate-700">{inv.installmentTitle}</td>
-                      <td className="p-3 text-right font-semibold">₹{inv.amount?.toLocaleString()}</td>
-                      <td className="p-3 text-right text-slate-500">₹{inv.tax?.toLocaleString()}</td>
-                      <td className="p-3 text-right font-bold text-slate-800">₹{inv.totalAmount?.toLocaleString()}</td>
-                      <td className="p-3 text-slate-600">{new Date(inv.dueDate).toLocaleDateString()}</td>
-                      <td className="p-3 text-center">
-                        <select
-                          value={inv.status}
-                          onChange={(e) => handleStatusChange(inv._id, e.target.value)}
-                          className={`text-xs font-bold rounded-full px-3 py-1 border outline-none appearance-none cursor-pointer ${
-                            inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                            inv.status === 'sent' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                            'bg-amber-50 text-amber-700 border-amber-200'
-                          }`}
-                        >
-                          <option value="generated">Generated</option>
-                          <option value="sent">Sent</option>
-                          <option value="paid">Paid</option>
-                          <option value="overdue">Overdue</option>
-                        </select>
-                      </td>
-                      <td className="p-3 text-center">
-                        {inv.invoicePdfURL ? (
-                          <a href={inv.invoicePdfURL} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-teal-600 hover:text-teal-800 font-semibold">
-                            <Eye size={16} /> View
-                          </a>
-                        ) : (
-                          <span className="text-slate-400">No PDF</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between border-t border-slate-200 pt-4 mt-4">
-              <span className="text-sm text-slate-500">
-                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredInvoices.length)} of {filteredInvoices.length}
-              </span>
-              <div className="flex gap-2">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => p - 1)}
-                  className="px-3 py-1 border border-slate-300 rounded-lg disabled:opacity-50 text-sm font-medium hover:bg-slate-50"
-                >
-                  Prev
-                </button>
-                <button
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(p => p + 1)}
-                  className="px-3 py-1 border border-slate-300 rounded-lg disabled:opacity-50 text-sm font-medium hover:bg-slate-50"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
         </div>
-      </div>
+      )}
     </div>
   );
 };

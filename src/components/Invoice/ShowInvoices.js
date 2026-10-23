@@ -112,19 +112,51 @@ const handleDownload = async (invoice) => {
   }
 };
 
-  const handleViewPdf = (invoice) => {
-    if (!invoice.invoicePdfURL) {
-      alert("No PDF available for this invoice.");
-      return;
-    }
-    setPdfUrl(invoice.invoicePdfURL);
-    setShowPdfModal(true);
-  };
+  const handleViewPdf = async (invoice) => {
+  if (!invoice?._id) {
+    alert("Invoice ID not found.");
+    return;
+  }
 
+  try {
+    setDownloading(invoice._id);
+
+    const response = await axios.get(
+      `${API_BASE_URL}/manual-invoices/${invoice._id}/download`,
+      {
+        responseType: "blob",
+        headers: AUTH_TOKEN
+          ? { Authorization: `Bearer ${AUTH_TOKEN}` }
+          : {},
+      }
+    );
+
+    const blob = new Blob([response.data], {
+      type: "application/pdf",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+
+    setPdfUrl((previousUrl) => {
+      if (previousUrl) {
+        window.URL.revokeObjectURL(previousUrl);
+      }
+
+      return url;
+    });
+
+    setShowPdfModal(true);
+  } catch (error) {
+    console.error("Invoice preview failed:", error);
+    alert("Unable to preview invoice. Please check the backend logs.");
+  } finally {
+    setDownloading(null);
+  }
+};
   const handleDelete = async (invoiceId) => {
     setDeleting(invoiceId);
     try {
-      await axios.delete(`${API_BASE_URL}/projects/invoices/${invoiceId}`);
+      await axios.delete(`${API_BASE_URL}/manual-invoices/${invoiceId}`);
       alert("Invoice deleted successfully!");
       setShowDeleteModal(false);
       setInvoiceToDelete(null);
