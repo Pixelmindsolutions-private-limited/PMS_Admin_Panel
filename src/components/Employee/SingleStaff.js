@@ -10,6 +10,7 @@ import {
   MdEdit,
   MdArrowBack,
   MdDownload,
+  MdAttachMoney, // Added for Salary
 } from "react-icons/md";
 import { FaUserTie, FaIdCard, FaFileAlt, FaPrint } from "react-icons/fa";
 
@@ -100,6 +101,16 @@ const StaffDetails = () => {
       month: "long",
       day: "numeric",
     });
+  };
+
+  // Format salary to Indian Rupees
+  const formatSalary = (amount) => {
+    if (amount === null || amount === undefined || amount === "") return "Not Set";
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 2,
+    }).format(amount);
   };
 
   const formatFileSize = (bytes) => {
@@ -232,13 +243,6 @@ const StaffDetails = () => {
           </button>
 
           <div className="flex items-center gap-2.5">
-            {/* <button
-              onClick={() => window.print()}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold bg-white border border-gray-200 text-gray-600 rounded-xl shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all"
-            >
-              <FaPrint className="text-xs sm:text-sm" />
-              <span className="hidden sm:inline">Print</span>
-            </button> */}
             <Link
               to={`/staff/edit/${staff.employeeId}`}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold bg-teal-600 text-white rounded-xl shadow-sm hover:bg-teal-700 transition-colors"
@@ -361,6 +365,15 @@ const StaffDetails = () => {
                   label="Joining Date"
                   value={formatDate(staff.joiningDate)}
                 />
+                
+                {/* --- Added Monthly Salary --- */}
+                <InfoCard
+                  icon={<MdAttachMoney className="text-emerald-500" />}
+                  label="Monthly Salary"
+                  value={formatSalary(staff.monthlySalary)}
+                  valueClass={staff.monthlySalary ? "text-emerald-700" : "text-gray-400"}
+                />
+                
                 <InfoCard
                   icon={
                     <MdPerson

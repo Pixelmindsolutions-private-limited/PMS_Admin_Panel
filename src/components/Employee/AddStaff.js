@@ -19,6 +19,7 @@ import {
   CheckCircle,
   AlertCircle,
   Loader,
+  IndianRupee,
 } from "lucide-react";
 
 const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff";
@@ -43,6 +44,7 @@ const AddStaff = () => {
     bloodGroup: "",
     password: "",
     confirmPassword: "",
+    monthlySalary: "", // Added monthlySalary
     address: {
       street: "",
       city: "",
@@ -167,7 +169,6 @@ const AddStaff = () => {
         } else if (!/(?=.*[0-9])/.test(value)) {
           error = "Password must contain at least one number";
         }
-        // Check confirm password if it exists
         if (formDataSnapshot.confirmPassword && value !== formDataSnapshot.confirmPassword) {
           setErrors(prev => ({ ...prev, confirmPassword: "Passwords do not match" }));
         } else if (formDataSnapshot.confirmPassword) {
@@ -180,6 +181,12 @@ const AddStaff = () => {
           error = "Please confirm your password";
         } else if (value !== formDataSnapshot.password) {
           error = "Passwords do not match";
+        }
+        break;
+
+      case "monthlySalary":
+        if (value !== "" && (isNaN(value) || Number(value) < 0)) {
+          error = "Salary must be a valid positive number";
         }
         break;
 
@@ -233,6 +240,7 @@ const AddStaff = () => {
     newErrors.gender = validateField("gender", formData.gender);
     newErrors.password = validateField("password", formData.password);
     newErrors.confirmPassword = validateField("confirmPassword", formData.confirmPassword);
+    newErrors.monthlySalary = validateField("monthlySalary", formData.monthlySalary); // Validate salary
 
     // Optional fields validation if they have values
     if (formData.bloodGroup && !bloodGroups.includes(formData.bloodGroup)) {
@@ -255,9 +263,6 @@ const AddStaff = () => {
     return Object.keys(newErrors).filter(key => newErrors[key]).length === 0;
   };
 
-  // ─── NEW: Step-2 (Employee Details) validation only ────────────
-  // Reuses the exact same validation logic — just scoped to the
-  // employee-details fields for the "Next" button on Step 2.
   const validateEmployeeDetails = () => {
     const newErrors = {};
 
@@ -270,6 +275,7 @@ const AddStaff = () => {
     newErrors.gender = validateField("gender", formData.gender);
     newErrors.password = validateField("password", formData.password);
     newErrors.confirmPassword = validateField("confirmPassword", formData.confirmPassword);
+    newErrors.monthlySalary = validateField("monthlySalary", formData.monthlySalary); // Validate salary
 
     if (formData.bloodGroup && !bloodGroups.includes(formData.bloodGroup)) {
       newErrors.bloodGroup = "Invalid blood group selected";
@@ -357,7 +363,6 @@ const AddStaff = () => {
         }
       }));
 
-      // Validate on change
       if (touched[name]) {
         const error = validateField(name, value);
         setErrors(prev => ({ ...prev, [name]: error }));
@@ -365,7 +370,6 @@ const AddStaff = () => {
     } else {
       setFormData({ ...formData, [name]: value });
 
-      // Validate on change
       if (touched[name]) {
         const error = validateField(name, value);
         setErrors(prev => ({ ...prev, [name]: error }));
@@ -377,7 +381,6 @@ const AddStaff = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file size and type
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
     const maxSize = 5 * 1024 * 1024; // 5MB
 
@@ -444,7 +447,6 @@ const AddStaff = () => {
       [key]: prev[key].filter((_, i) => i !== index),
     }));
 
-  // ─── NEW: Step 1 → Step 2 handler ──────────────────────────────
   const handleNextFromPhotos = () => {
     if (!profileImage || !idCardImage) {
       Swal.fire({
@@ -458,19 +460,16 @@ const AddStaff = () => {
     setCurrentStep(2);
   };
 
-  // ─── NEW: Step 2 → Step 3 handler ──────────────────────────────
   const handleNextFromDetails = () => {
-    // Mark all Step-2 fields as touched so errors display
     const step2Fields = [
       'employeeId', 'employeeName', 'role', 'mobile', 'email',
-      'joiningDate', 'gender', 'password', 'confirmPassword'
+      'joiningDate', 'gender', 'password', 'confirmPassword', 'monthlySalary'
     ];
     const touchedFields = { ...touched };
     step2Fields.forEach(field => { touchedFields[field] = true; });
     setTouched(touchedFields);
 
     if (!validateEmployeeDetails()) {
-      // Scroll to first error
       const firstErrorField = Object.keys(errors).find(key => errors[key]);
       if (firstErrorField) {
         const element = document.querySelector(`[name="${firstErrorField}"]`);
@@ -495,17 +494,14 @@ const AddStaff = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Mark all fields as touched
     const allFields = [
-      'employeeId', 'employeeName', 'role', 'mobile', 'email', 'joiningDate', 'gender', 'password', 'confirmPassword'
+      'employeeId', 'employeeName', 'role', 'mobile', 'email', 'joiningDate', 'gender', 'password', 'confirmPassword', 'monthlySalary'
     ];
     const touchedFields = {};
     allFields.forEach(field => { touchedFields[field] = true; });
     setTouched(touchedFields);
 
-    // Validate form
     if (!validateForm()) {
-      // Scroll to first error
       const firstErrorField = Object.keys(errors).find(key => errors[key]);
       if (firstErrorField) {
         const element = document.querySelector(`[name="${firstErrorField}"]`);
@@ -539,6 +535,11 @@ const AddStaff = () => {
       formDataToSend.append('gender', formData.gender || '');
       formDataToSend.append('bloodGroup', formData.bloodGroup || 'Unknown');
       formDataToSend.append('password', formData.password);
+
+      // Add monthlySalary ONLY if user entered a value (so it stays null in backend if empty)
+      if (formData.monthlySalary !== "" && formData.monthlySalary !== null) {
+        formDataToSend.append('monthlySalary', formData.monthlySalary);
+      }
 
       // Add address as JSON string if any field has value
       const hasAddress = formData.address.street || formData.address.city ||
@@ -687,7 +688,6 @@ const AddStaff = () => {
           </button>
         </div>
 
-        {/* ─── NEW: Step indicator ────────────────────────────────── */}
         <div className="flex items-center justify-center gap-2 sm:gap-3 mb-6">
           {[1, 2, 3].map((step) => (
             <React.Fragment key={step}>
@@ -727,9 +727,8 @@ const AddStaff = () => {
         </div>
 
         <div className="bg-white/93 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-xl border border-teal-200/30 animate-in fade-in duration-500 delay-100">
-          {/* ═══════════════════════════════════════════════════════
-              STEP 1 — PHOTOS
-              ═══════════════════════════════════════════════════════ */}
+          
+          {/* STEP 1 — PHOTOS */}
           {currentStep === 1 && (
             <>
               <div className="flex items-center gap-3 mb-5">
@@ -755,7 +754,6 @@ const AddStaff = () => {
                 />
               </div>
 
-              {/* Cancel + Next buttons */}
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
@@ -777,9 +775,7 @@ const AddStaff = () => {
             </>
           )}
 
-          {/* ═══════════════════════════════════════════════════════
-              STEP 2 — EMPLOYEE DETAILS
-              ═══════════════════════════════════════════════════════ */}
+          {/* STEP 2 — EMPLOYEE DETAILS */}
           {currentStep === 2 && (
             <>
               <div className="flex items-center gap-3 mb-5">
@@ -888,6 +884,22 @@ const AddStaff = () => {
                   onChange={handleChange}
                   options={bloodGroups}
                 />
+                
+                {/* Added Monthly Salary Field */}
+                <FInput
+                  label="Monthly Salary (₹)"
+                  icon={<IndianRupee size={14} />}
+                  name="monthlySalary"
+                  value={formData.monthlySalary}
+                  onChange={handleChange}
+                  onBlur={() => handleBlur("monthlySalary")}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Enter monthly salary"
+                  error={touched.monthlySalary && errors.monthlySalary}
+                />
+
                 <FInput
                   label="Password"
                   icon={<Lock size={14} />}
@@ -1060,9 +1072,7 @@ const AddStaff = () => {
             </>
           )}
 
-          {/* ═══════════════════════════════════════════════════════
-              STEP 3 — DOCUMENTS
-              ═══════════════════════════════════════════════════════ */}
+          {/* STEP 3 — DOCUMENTS */}
           {currentStep === 3 && (
             <form onSubmit={handleSubmit}>
               <div className="flex items-center gap-3 mb-5">

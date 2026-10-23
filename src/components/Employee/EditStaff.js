@@ -20,7 +20,8 @@ import {
   Shield,
   Trash2,
   Eye,
-  Download
+  Download,
+  IndianRupee // Added IndianRupee icon
 } from "lucide-react";
 
 const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff";
@@ -90,6 +91,7 @@ const EditStaff = () => {
     bloodGroup: "",
     password: "",
     isActive: true,
+    monthlySalary: "", // <--- Added monthlySalary
     address: {
       street: "",
       city: "",
@@ -103,6 +105,9 @@ const EditStaff = () => {
       mobile: ""
     }
   });
+
+  // Validation Errors state
+  const [errors, setErrors] = useState({});
 
   const [showAddress, setShowAddress] = useState(false);
   const [showEmergency, setShowEmergency] = useState(false);
@@ -152,6 +157,8 @@ const EditStaff = () => {
         bloodGroup: s.bloodGroup || "",
         password: "",
         isActive: s.isActive ?? true,
+        // <--- Populate salary (null/undefined becomes empty string)
+        monthlySalary: s.monthlySalary ?? "", 
         address: s.address || { street: "", city: "", state: "", pincode: "", country: "India" },
         emergencyContact: s.emergencyContact || { name: "", relation: "", mobile: "" }
       });
@@ -205,6 +212,11 @@ const EditStaff = () => {
       }));
     } else {
       setFormData((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
+    }
+
+    // Clear error for this field when user types
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
     }
   };
 
@@ -279,6 +291,14 @@ const EditStaff = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate Salary
+    if (formData.monthlySalary !== "" && Number(formData.monthlySalary) < 0) {
+      setErrors(prev => ({ ...prev, monthlySalary: "Salary cannot be negative" }));
+      showToast("error", "Please fix validation errors before submitting");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -293,6 +313,15 @@ const EditStaff = () => {
       formDataToSend.append('gender', formData.gender || '');
       formDataToSend.append('bloodGroup', formData.bloodGroup || 'Unknown');
       formDataToSend.append('isActive', formData.isActive);
+
+      // --- Append Monthly Salary ---
+      // If the field has a value, send it. 
+      // If it's empty, send "null" so the backend clears it (since the backend allows null).
+      if (formData.monthlySalary === "" || formData.monthlySalary === null) {
+        formDataToSend.append('monthlySalary', 'null');
+      } else {
+        formDataToSend.append('monthlySalary', formData.monthlySalary);
+      }
 
       if (formData.password && formData.password.trim()) {
         formDataToSend.append('password', formData.password);
@@ -539,6 +568,23 @@ const EditStaff = () => {
               <InputField icon={<Calendar size={14} />} label="Joining Date" name="joiningDate" type="date" value={formData.joiningDate} onChange={handleChange} />
               <SelectField icon={<User size={14} />} label="Gender" name="gender" value={formData.gender} onChange={handleChange} options={genders} />
               <SelectField icon={<Droplet size={14} />} label="Blood Group" name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} options={bloodGroups} />
+              
+              {/* Added Monthly Salary Input */}
+              <div>
+                <InputField 
+                  icon={<IndianRupee size={14} />} 
+                  label="Monthly Salary (₹)" 
+                  name="monthlySalary" 
+                  type="number" 
+                  min="0" 
+                  step="0.01" 
+                  value={formData.monthlySalary} 
+                  onChange={handleChange} 
+                  placeholder="Enter monthly salary" 
+                />
+                {errors.monthlySalary && <p className="text-red-500 text-xs mt-1">{errors.monthlySalary}</p>}
+              </div>
+
               <InputField icon={<Lock size={14} />} label="New Password" name="password" type="password" value={formData.password} onChange={handleChange} placeholder="Leave blank to keep current" />
             </div>
           </div>

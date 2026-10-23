@@ -2,17 +2,16 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { Download, Eye, Trash2, Edit } from "lucide-react";
 
 const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api";
 
 const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
-
 const AUTH_TOKEN = loginDetails?.token;
 
 const permission = loginDetails?.modulePermissions?.find(
   (item) => item.component === "invoice"
 );
-
 const access = permission?.items?.[0]?.permission || [];
 
 const ShowInvoices = () => {
@@ -22,7 +21,6 @@ const ShowInvoices = () => {
   const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(null);
   const [deleting, setDeleting] = useState(null);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showPdfModal, setShowPdfModal] = useState(false);
   const [pdfUrl, setPdfUrl] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -45,16 +43,18 @@ const ShowInvoices = () => {
     setLoading(true);
     setError("");
     try {
+      // Using the exact endpoint you requested
       const response = await axios.get(
-        `${API_BASE_URL}/manual-invoices?page=${page}&limit=${limit}`
+        `${API_BASE_URL}/projects/getinvoices?page=${page}&limit=${limit}`
       );
+      
       if (response.data.success) {
         setInvoices(response.data.data);
         setPagination({
-          currentPage: response.data.pagination.page || page,
-          totalPages: response.data.pagination.pages || 1,
-          totalInvoices: response.data.pagination.total || 0,
-          limit: response.data.pagination.limit || limit,
+          currentPage: response.data.pagination?.page || page,
+          totalPages: response.data.pagination?.pages || 1,
+          totalInvoices: response.data.pagination?.total || response.data.total || 0,
+          limit: response.data.pagination?.limit || limit,
         });
       } else {
         setError("Failed to fetch invoices");
@@ -67,65 +67,64 @@ const ShowInvoices = () => {
     }
   };
 
-  const handleDownload = async (invoiceId) => {
-    setDownloading(invoiceId);
-    try {
-      const response = await axios.get(
-        `${API_BASE_URL}/manual-invoices/${invoiceId}/download`,
-        {
-          responseType: "blob",
-        }
-      );
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement("a");
-      link.href = url;
+const handleDownload = async (invoice) => {
+  if (!invoice._id) {
+    alert("Invoice ID not found.");
+    return;
+  }
 
-      const contentDisposition = response.headers["content-disposition"];
-      let filename = `invoice-${invoiceId}.pdf`;
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
-        }
+  setDownloading(invoice._id);
+
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/manual-invoices/${invoice._id}/download`,
+      {
+        responseType: "blob",
+        headers: AUTH_TOKEN
+          ? { Authorization: `Bearer ${AUTH_TOKEN}` }
+          : {},
       }
+    );
 
-      link.setAttribute("download", filename);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Error downloading invoice:", err);
-      alert("Failed to download invoice. Please try again.");
-    } finally {
-      setDownloading(null);
+    const blob = new Blob([response.data], {
+      type: "application/pdf",
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = invoice.invoiceNumber
+      ? `${invoice.invoiceNumber}.pdf`
+      : `invoice-${invoice._id}.pdf`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Invoice download failed:", error);
+    alert("Invoice download failed. Please check the API route and server logs.");
+  } finally {
+    setDownloading(null);
+  }
+};
+
+  const handleViewPdf = (invoice) => {
+    if (!invoice.invoicePdfURL) {
+      alert("No PDF available for this invoice.");
+      return;
     }
-  };
-
-  const handleViewPdf = async (invoiceId) => {
-    try {
-      setSelectedInvoice(invoiceId);
-      const response = await axios.get(
-        `${API_BASE_URL}/manual-invoices/${invoiceId}/download`,
-        {
-          responseType: "blob",
-        }
-      );
-
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      setPdfUrl(url);
-      setShowPdfModal(true);
-    } catch (err) {
-      console.error("Error viewing PDF:", err);
-      alert("Failed to load PDF. Please try again.");
-    }
+    setPdfUrl(invoice.invoicePdfURL);
+    setShowPdfModal(true);
   };
 
   const handleDelete = async (invoiceId) => {
     setDeleting(invoiceId);
     try {
-      await axios.delete(`${API_BASE_URL}/manual-invoices/${invoiceId}`);
+      await axios.delete(`${API_BASE_URL}/projects/invoices/${invoiceId}`);
       alert("Invoice deleted successfully!");
       setShowDeleteModal(false);
       setInvoiceToDelete(null);
@@ -142,44 +141,6 @@ const ShowInvoices = () => {
     navigate(`/edit-invoice/${invoiceId}`);
   };
 
-  const handleExport = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/manual-invoices`, {
-        params: {
-          limit: 1000, // Get all invoices for export
-        }
-      });
-
-      if (response.data.success) {
-        const data = response.data.data;
-        // Convert to CSV
-        const headers = ['Invoice ID', 'Client Name', 'Mobile', 'Date', 'Total Amount', 'Status'];
-        const rows = data.map(inv => [
-          `INV${String(inv._id).slice(-6).toUpperCase()}`,
-          inv.clientName,
-          inv.clientMobile,
-          formatDate(inv.date),
-          formatCurrency(inv.totalAmount || inv.subtotal),
-          inv.status || 'Unpaid'
-        ]);
-
-        const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `invoices_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-      }
-    } catch (err) {
-      console.error("Error exporting invoices:", err);
-      alert("Failed to export invoices. Please try again.");
-    }
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
@@ -191,6 +152,7 @@ const ShowInvoices = () => {
   };
 
   const formatCurrency = (amount) => {
+    if (amount === null || amount === undefined) return "-";
     return `₹${Number(amount).toLocaleString("en-IN")}`;
   };
 
@@ -217,23 +179,17 @@ const ShowInvoices = () => {
       }
     } else {
       if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) {
-          pages.push(i);
-        }
+        for (let i = 1; i <= 4; i++) pages.push(i);
         pages.push('...');
         pages.push(totalPages);
       } else if (currentPage >= totalPages - 2) {
         pages.push(1);
         pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) {
-          pages.push(i);
-        }
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
       } else {
         pages.push(1);
         pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
-          pages.push(i);
-        }
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
         pages.push('...');
         pages.push(totalPages);
       }
@@ -260,7 +216,7 @@ const ShowInvoices = () => {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6">
             <div>
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800">
-                Invoices
+                Project Invoices
               </h2>
               <p className="text-sm text-slate-500 mt-1">
                 Total: <span className="font-semibold text-slate-700">{pagination.totalInvoices}</span> invoices
@@ -282,19 +238,6 @@ const ShowInvoices = () => {
                   <option value={50}>50</option>
                 </select>
               </div>
-
-              {/* Export Button */}
-              {(loginDetails?.role === "Admin" || access.includes("export")) && (
-                <button
-                  onClick={handleExport}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-medium transition"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Export
-                </button>
-              )}
 
               {/* Create Invoice Button */}
               {(loginDetails?.role === "Admin" || access.includes("add")) && (
@@ -328,13 +271,6 @@ const ShowInvoices = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <p className="text-slate-500 text-lg">No invoices found</p>
-              <p className="text-sm text-slate-400 mt-1">Create your first invoice now</p>
-              <button
-                onClick={() => navigate('/')}
-                className="mt-4 px-6 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-medium transition"
-              >
-                Create Invoice
-              </button>
             </div>
           ) : (
             <>
@@ -343,12 +279,11 @@ const ShowInvoices = () => {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-50 text-slate-700 border-b border-slate-200">
-                      <th className="p-3 text-left font-semibold">Invoice</th>
-                      <th className="p-3 text-left font-semibold">Client</th>
-                      <th className="p-3 text-left font-semibold">Mobile</th>
+                      <th className="p-3 text-left font-semibold">Invoice No</th>
+                      <th className="p-3 text-left font-semibold">Installment</th>
                       <th className="p-3 text-left font-semibold">Date</th>
                       <th className="p-3 text-right font-semibold">Amount</th>
-                      <th className="p-3 text-center font-semibold">PDF</th>
+                      <th className="p-3 text-center font-semibold">Status</th>
                       <th className="p-3 text-center font-semibold">Actions</th>
                     </tr>
                   </thead>
@@ -356,105 +291,80 @@ const ShowInvoices = () => {
                     {invoices.map((inv, index) => (
                       <tr
                         key={inv._id}
-                        className={`border-b border-slate-100 hover:bg-slate-50 transition ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'
-                          }`}
+                        className={`border-b border-slate-100 hover:bg-slate-50 transition ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}
                       >
                         <td className="p-3 font-semibold text-teal-600">
-                          INV{String(inv._id).slice(-6).toUpperCase()}
+                          {inv.invoiceNumber || "N/A"}
                         </td>
                         <td className="p-3 font-medium text-slate-800">
-                          {inv.clientName}
+                          {inv.installmentTitle || "N/A"}
                         </td>
                         <td className="p-3 text-slate-600">
-                          {inv.clientMobile}
-                        </td>
-                        <td className="p-3 text-slate-600">
-                          {formatDate(inv.date)}
+                          {formatDate(inv.paymentDate || inv.createdAt)}
                         </td>
                         <td className="p-3 text-right font-semibold text-slate-800">
-                          {formatCurrency(inv.totalAmount || inv.subtotal)}
+                          {formatCurrency(inv.totalAmount)}
                         </td>
                         <td className="p-3 text-center">
                           <span
-                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${inv.invoicePdfURL
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                              }`}
+                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase ${
+                              inv.status === "sent" 
+                                ? "bg-blue-100 text-blue-700" 
+                                : inv.status === "paid"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-slate-100 text-slate-700"
+                            }`}
                           >
-                            {inv.invoicePdfURL ? "PDF" : "No PDF"}
+                            {inv.status}
                           </span>
                         </td>
                         <td className="p-3">
-                          <div className="flex items-center justify-center gap-1">
+                          <div className="flex items-center justify-center gap-2">
                             {/* View Button */}
-                            {(loginDetails?.role === "Admin" || access.includes("view")) && (
-                              <button
-                                onClick={() => handleViewPdf(inv._id)}
-                                title="View PDF"
-                                disabled={!inv.invoicePdfURL}
-                                className={`p-1.5 rounded-lg transition ${inv.invoicePdfURL
-                                  ? "text-blue-600 hover:bg-blue-50"
+                            <button
+                              onClick={() => handleViewPdf(inv)}
+                              disabled={!inv.invoicePdfURL}
+                              className={`p-1.5 rounded-lg transition ${
+                                inv.invoicePdfURL 
+                                  ? "text-blue-600 hover:bg-blue-50" 
                                   : "text-gray-400 cursor-not-allowed"
-                                  }`}
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                              </button>
-                            )}
+                              }`}
+                              title="View PDF"
+                            >
+                              <Eye size={18} />
+                            </button>
 
-                            {/* Download Button */}
-                            {(loginDetails?.role === "Admin" || access.includes("download")) && (
-                              <button
-                                onClick={() => handleDownload(inv._id)}
-                                disabled={downloading === inv._id || !inv.invoicePdfURL}
-                                className={`p-1.5 rounded-lg transition ${downloading === inv._id
+                            {/* Download Button (Requested) */}
+                            <button
+                              onClick={() => handleDownload(inv)}
+                              disabled={downloading === inv._id}
+                              className={`p-1.5 rounded-lg transition ${
+                                downloading === inv._id
                                   ? "text-gray-400 cursor-not-allowed"
                                   : inv.invoicePdfURL
-                                    ? "text-teal-600 hover:bg-teal-50"
-                                    : "text-gray-400 cursor-not-allowed"
-                                  }`}
-                                title="Download PDF"
-                              >
-                                {downloading === inv._id ? (
-                                  <span className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-teal-600"></span>
-                                ) : (
-                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                  </svg>
-                                )}
-                              </button>
-                            )}
-
-                            {/* Edit Button */}
-                            {(loginDetails?.role === "Admin" || access.includes("edit")) && (
-                              <button
-                                onClick={() => handleEdit(inv._id)}
-                                className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition"
-                                title="Edit Invoice"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                              </button>
-                            )}
+                                  ? "text-teal-600 hover:bg-teal-50"
+                                  : "text-gray-400 cursor-not-allowed"
+                              }`}
+                              title="Download PDF"
+                            >
+                              {downloading === inv._id ? (
+                                <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-teal-600"></span>
+                              ) : (
+                                <Download size={18} />
+                              )}
+                            </button>
 
                             {/* Delete Button */}
-                            {(loginDetails?.role === "Admin" || access.includes("delete")) && (
-                              <button
-                                onClick={() => {
-                                  setInvoiceToDelete(inv._id);
-                                  setShowDeleteModal(true);
-                                }}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
-                                title="Delete Invoice"
-                              >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                setInvoiceToDelete(inv._id);
+                                setShowDeleteModal(true);
+                              }}
+                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition"
+                              title="Delete Invoice"
+                            >
+                              <Trash2 size={18} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -463,78 +373,53 @@ const ShowInvoices = () => {
                 </table>
               </div>
 
-              {/* Cards - Mobile/Tablet View */}
+              {/* Cards - Mobile View */}
               <div className="md:hidden space-y-4">
                 {invoices.map((inv) => (
-                  <div
-                    key={inv._id}
-                    className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm"
-                  >
+                  <div key={inv._id} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <p className="font-semibold text-teal-600 text-sm">
-                          INV{String(inv._id).slice(-6).toUpperCase()}
+                          {inv.invoiceNumber}
                         </p>
                         <p className="font-medium text-slate-800 mt-1">
-                          {inv.clientName}
+                          {inv.installmentTitle}
                         </p>
                       </div>
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${inv.status === "Paid"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-yellow-100 text-yellow-700"
-                          }`}
-                      >
-                        {inv.status || "Unpaid"}
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold uppercase ${
+                          inv.status === "sent" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
+                        }`}>
+                        {inv.status}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                       <div>
-                        <p className="text-slate-500">Mobile</p>
-                        <p className="font-medium text-slate-700">{inv.clientMobile}</p>
+                        <p className="text-slate-500">Date</p>
+                        <p className="font-medium text-slate-700">{formatDate(inv.paymentDate || inv.createdAt)}</p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Date</p>
-                        <p className="font-medium text-slate-700">{formatDate(inv.date)}</p>
-                      </div>
-                      <div className="col-span-2">
                         <p className="text-slate-500">Amount</p>
-                        <p className="font-bold text-lg text-slate-800">
-                          {formatCurrency(inv.totalAmount || inv.subtotal)}
-                        </p>
+                        <p className="font-bold text-slate-800">{formatCurrency(inv.totalAmount)}</p>
                       </div>
                     </div>
 
                     <div className="flex gap-2">
                       <button
-                        onClick={() => handleViewPdf(inv._id)}
-                        disabled={!inv.invoicePdfURL}
-                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                        onClick={() => handleDownload(inv)}
+                        disabled={downloading === inv._id}
+                        className="flex-1 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition disabled:bg-gray-300 flex items-center justify-center gap-1"
                       >
-                        View
-                      </button>
-                      <button
-                        onClick={() => handleDownload(inv._id)}
-                        disabled={downloading === inv._id || !inv.invoicePdfURL}
-                        className="flex-1 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed"
-                      >
-                        {downloading === inv._id ? '...' : 'Download'}
-                      </button>
-                      <button
-                        onClick={() => handleEdit(inv._id)}
-                        className="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition"
-                      >
-                        Edit
+                        <Download size={16} /> {downloading === inv._id ? 'Wait...' : 'Download'}
                       </button>
                       <button
                         onClick={() => {
                           setInvoiceToDelete(inv._id);
                           setShowDeleteModal(true);
                         }}
-                        className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition"
+                        className="py-2 px-4 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition"
                       >
-                        Delete
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
@@ -554,25 +439,26 @@ const ShowInvoices = () => {
                     <button
                       onClick={() => handlePageChange(pagination.currentPage - 1)}
                       disabled={pagination.currentPage === 1}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${pagination.currentPage === 1
-                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                        : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                        }`}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                        pagination.currentPage === 1
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      }`}
                     >
-                      <span className="hidden sm:inline">Previous</span>
-                      <span className="sm:hidden">‹</span>
+                      Prev
                     </button>
 
                     {getPageNumbers().map((page, index) => (
                       <button
                         key={index}
                         onClick={() => typeof page === 'number' && handlePageChange(page)}
-                        className={`min-w-[2.2rem] h-9 rounded-lg text-sm font-medium transition ${page === pagination.currentPage
-                          ? "bg-teal-600 text-white"
-                          : page === '...'
+                        className={`min-w-[2.2rem] h-9 rounded-lg text-sm font-medium transition ${
+                          page === pagination.currentPage
+                            ? "bg-teal-600 text-white"
+                            : page === '...'
                             ? "bg-transparent text-slate-500 cursor-default"
                             : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                          }`}
+                        }`}
                         disabled={page === '...'}
                       >
                         {page}
@@ -582,13 +468,13 @@ const ShowInvoices = () => {
                     <button
                       onClick={() => handlePageChange(pagination.currentPage + 1)}
                       disabled={pagination.currentPage === pagination.totalPages}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${pagination.currentPage === pagination.totalPages
-                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                        : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                        }`}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                        pagination.currentPage === pagination.totalPages
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                          : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                      }`}
                     >
-                      <span className="hidden sm:inline">Next</span>
-                      <span className="sm:hidden">›</span>
+                      Next
                     </button>
                   </div>
                 </div>
@@ -608,7 +494,6 @@ const ShowInvoices = () => {
                 onClick={() => {
                   setShowPdfModal(false);
                   setPdfUrl("");
-                  setSelectedInvoice(null);
                 }}
                 className="p-2 hover:bg-slate-100 rounded-lg transition"
               >
@@ -623,21 +508,6 @@ const ShowInvoices = () => {
                 className="w-full h-[70vh] rounded-lg"
                 title="Invoice PDF"
               />
-            </div>
-            <div className="p-4 border-t border-slate-200 flex justify-end">
-              <button
-                onClick={() => {
-                  const link = document.createElement('a');
-                  link.href = pdfUrl;
-                  link.download = `invoice-${selectedInvoice}.pdf`;
-                  document.body.appendChild(link);
-                  link.click();
-                  link.remove();
-                }}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-sm font-medium transition"
-              >
-                Download PDF
-              </button>
             </div>
           </div>
         </div>

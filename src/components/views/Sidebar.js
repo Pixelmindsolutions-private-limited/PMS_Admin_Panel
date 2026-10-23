@@ -157,17 +157,17 @@ const ALL_MENU_ITEMS = [
       { path: '/work-session-reports', label: 'Work Reports', icon: <MdTrendingUp />, description: 'Analytics', access: 'view' },
     ],
   },
-  // {
-  //   id: 'invoice',
-  //   label: 'Invoicing',
-  //   icon: <MdFolder />,
-  //   description: 'Billing & payments',
-  //   moduleKey: 'invoice',
-  //   submenu: [
-  //     { path: '/create-invoice', label: 'Create Invoice', icon: <MdAddCircleOutline />, description: 'New invoice', access: 'manage' },
-  //     { path: '/invoices', label: 'Invoice List', icon: <MdListAlt />, description: 'All invoices', access: 'view' },
-  //   ],
-  // },
+  {
+    id: 'invoice',
+    label: 'Invoicing',
+    icon: <MdFolder />,
+    description: 'Billing & payments',
+    moduleKey: 'invoice',
+    submenu: [
+      { path: '/create-invoice', label: 'Create Invoice', icon: <MdAddCircleOutline />, description: 'New invoice', access: 'manage' },
+      { path: '/invoices', label: 'Invoice List', icon: <MdListAlt />, description: 'All invoices', access: 'view' },
+    ],
+  },
 ];
 
 const BOTTOM_MENU_ITEMS = [
