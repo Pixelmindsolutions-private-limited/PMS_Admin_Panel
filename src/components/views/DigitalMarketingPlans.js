@@ -23,7 +23,7 @@ import {
 } from 'react-icons/md';
 import { FaClipboardList } from 'react-icons/fa';
 
-const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api/digitalmarketing";
+const API_BASE_URL = "https://pms-crm-backend.onrender.com/api/digitalmarketing";
 
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;

@@ -38,7 +38,7 @@ const StaffLogin = ({ onLogin }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('https://pmsbackend.pixelmindsolutions.com/api/admin-staff/login', {
+      const response = await fetch('https://pms-crm-backend.onrender.com/api/admin-staff/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

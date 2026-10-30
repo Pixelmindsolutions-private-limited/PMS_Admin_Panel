@@ -23,7 +23,7 @@ ChartJS.register(
 /* ──────────────────────────────────────────── */
 /*  CONFIG                                      */
 /* ──────────────────────────────────────────── */
-const STATS_API = "https://pmsbackend.pixelmindsolutions.com/api/attendance/stats";
+const STATS_API = "https://pms-crm-backend.onrender.com/api/attendance/stats";
 
 const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 

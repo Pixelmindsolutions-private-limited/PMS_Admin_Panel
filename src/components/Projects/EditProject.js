@@ -3,8 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { FolderPlus, X, CheckCircle, AlertCircle, Loader, UserPlus, UserMinus, Search } from "lucide-react";
 
-const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects";
-const STAFF_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff/options";
+const API_URL = "https://pms-crm-backend.onrender.com/api/projects";
+const STAFF_URL = "https://pms-crm-backend.onrender.com/api/staff/options";
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;
 

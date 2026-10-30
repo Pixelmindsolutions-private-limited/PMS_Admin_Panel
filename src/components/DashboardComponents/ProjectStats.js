@@ -12,7 +12,7 @@ const ProjectNav = () => {
     useEffect(() => {
         const fetchProjects = async () => {
             try {
-                const res = await fetch('https://pmsbackend.pixelmindsolutions.com/api/projects');
+                const res = await fetch('https://pms-crm-backend.onrender.com/api/projects');
                 const data = await res.json();
                 if (data.success) {
                     setProjects(data.data);
@@ -29,7 +29,7 @@ const ProjectNav = () => {
     const handleProjectClick = async (projectId) => {
         setModalLoading(true);
         try {
-            const res = await fetch(`https://pmsbackend.pixelmindsolutions.com/api/project/${projectId}`);
+            const res = await fetch(`https://pms-crm-backend.onrender.com/api/project/${projectId}`);
             const data = await res.json();
             if (data.success) {
                 setSelectedProject(data.data);

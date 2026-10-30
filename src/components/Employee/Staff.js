@@ -24,7 +24,7 @@ import {
 } from "react-icons/md";
 import { useLocation } from "react-router-dom";
 
-const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff" || "https://pmsbackend.pixelmindsolutions.com/api/staff";
+const API_BASE_URL = "https://pms-crm-backend.onrender.com/api/staff" || "https://pms-crm-backend.onrender.com/api/staff";
 
 const getLoginDetails = () => {
   try {

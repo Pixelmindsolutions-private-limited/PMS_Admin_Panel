@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Download, Eye, Trash2, Edit } from "lucide-react";
 
-const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api";
+const API_BASE_URL = "https://pms-crm-backend.onrender.com/api";
 
 const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 const AUTH_TOKEN = loginDetails?.token;

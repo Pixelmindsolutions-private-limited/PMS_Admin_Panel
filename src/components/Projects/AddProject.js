@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { FolderPlus, X, CheckCircle, AlertCircle, Loader, UserPlus, UserMinus, Package, TrendingUp, Share2, Search, Image, Megaphone, Clock, ArrowRight, ArrowLeft } from "lucide-react";
 
-const API_URL = "https://pmsbackend.pixelmindsolutions.com/api/projects/create";
-const CLIENTS_URL = "https://pmsbackend.pixelmindsolutions.com/api/clients/all";
-const STAFF_URL = "https://pmsbackend.pixelmindsolutions.com/api/staff/options";
-const MARKETING_PLANS_URL = "https://pmsbackend.pixelmindsolutions.com/api/digitalmarketing/plans";
+const API_URL = "https://pms-crm-backend.onrender.com/api/projects/create";
+const CLIENTS_URL = "https://pms-crm-backend.onrender.com/api/clients/all";
+const STAFF_URL = "https://pms-crm-backend.onrender.com/api/staff/options";
+const MARKETING_PLANS_URL = "https://pms-crm-backend.onrender.com/api/digitalmarketing/plans";
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;
 

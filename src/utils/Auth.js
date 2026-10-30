@@ -23,9 +23,9 @@
 // utils/Auth.js
 
 
-export const API_BASE = "https://pmsbackend.pixelmindsolutions.com/api" ;
+export const API_BASE = "https://pms-crm-backend.onrender.com/api" ;
 
-export const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api" ;
+export const API_BASE_URL = "https://pms-crm-backend.onrender.com/api" ;
 
 const getAuthToken = () => {
   for (const key of ["loginDetails", "adminDetails"]) {

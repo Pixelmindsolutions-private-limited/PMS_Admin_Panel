@@ -13,7 +13,7 @@ const ProjectsTable = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await fetch("https://pmsbackend.pixelmindsolutions.com/api/projects");
+        const res = await fetch("https://pms-crm-backend.onrender.com/api/projects");
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
           setProjects(data.data);

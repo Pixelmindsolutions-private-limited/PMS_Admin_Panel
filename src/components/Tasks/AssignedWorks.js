@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { getAuthHeaders } from "../../utils/Auth";
 import { FaTasks } from "react-icons/fa";
 
-const API_BASE = "https://pmsbackend.pixelmindsolutions.com/api";
+const API_BASE = "https://pms-crm-backend.onrender.com/api";
 
 const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 

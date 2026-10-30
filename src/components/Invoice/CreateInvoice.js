@@ -18,7 +18,7 @@ const company = {
   website: "www.pixelmindsolutions.com",
 };
 
-const API_BASE_URL = "https://pmsbackend.pixelmindsolutions.com/api";
+const API_BASE_URL = "https://pms-crm-backend.onrender.com/api";
 
 const CreateInvoice = () => {
   // Project State

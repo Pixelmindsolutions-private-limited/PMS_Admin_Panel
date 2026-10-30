@@ -14,10 +14,10 @@ const WelcomeCard = () => {
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const countsRes = await fetch('https://pmsbackend.pixelmindsolutions.com/api/counts');
+        const countsRes = await fetch('https://pms-crm-backend.onrender.com/api/counts');
         const countsData = await countsRes.json();
 
-        const staffRes = await fetch('https://pmsbackend.pixelmindsolutions.com/api/get_all_staffs');
+        const staffRes = await fetch('https://pms-crm-backend.onrender.com/api/get_all_staffs');
         const staffData = await staffRes.json();
 
         if (countsData.success && staffData.success) {
