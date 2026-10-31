@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { UserPlus, X, CheckCircle, AlertCircle, Loader } from "lucide-react";
 
-const API_URL = "https://pms-crm-backend.onrender.com/api/clients";
+const API_URL = "http://15.135.216.211:5000/api/clients";
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;
 

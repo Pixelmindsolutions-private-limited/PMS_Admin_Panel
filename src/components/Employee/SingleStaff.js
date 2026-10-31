@@ -14,7 +14,7 @@ import {
 } from "react-icons/md";
 import { FaUserTie, FaIdCard, FaFileAlt, FaPrint } from "react-icons/fa";
 
-const API_URL = "https://pms-crm-backend.onrender.com/api/staff";
+const API_URL = "http://15.135.216.211:5000/api/staff";
 
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;

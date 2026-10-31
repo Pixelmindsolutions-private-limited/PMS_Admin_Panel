@@ -8,10 +8,10 @@ import {
   Bell, Users, Mail, Phone, Send, MessageSquare, Check
 } from "lucide-react";
 
-const API_URL = "https://pms-crm-backend.onrender.com/api/projects/all";
-const INSTALLMENT_URL = "https://pms-crm-backend.onrender.com/api/projects";
-const UPCOMING_INSTALLMENTS_URL = "https://pms-crm-backend.onrender.com/api/projects/upcominginstallments";
-const SEND_REMINDER_URL = "https://pms-crm-backend.onrender.com/api/projects/sendremainder";
+const API_URL = "http://15.135.216.211:5000/api/projects/all";
+const INSTALLMENT_URL = "http://15.135.216.211:5000/api/projects";
+const UPCOMING_INSTALLMENTS_URL = "http://15.135.216.211:5000/api/projects/upcominginstallments";
+const SEND_REMINDER_URL = "http://15.135.216.211:5000/api/projects/sendremainder";
 const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 
 const AUTH_TOKEN = loginDetails?.token;

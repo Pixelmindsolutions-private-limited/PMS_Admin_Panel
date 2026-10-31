@@ -1,47 +1,41 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { FolderPlus, X, CheckCircle, AlertCircle, Loader, UserPlus, UserMinus, Package, TrendingUp, Share2, Search, Image, Megaphone, Clock, ArrowRight, ArrowLeft } from "lucide-react";
+import { FolderPlus, X, CheckCircle, Loader, UserPlus, Megaphone, Clock, ArrowRight, ArrowLeft } from "lucide-react";
 
-const API_URL = "https://pms-crm-backend.onrender.com/api/projects/create";
-const CLIENTS_URL = "https://pms-crm-backend.onrender.com/api/clients/all";
-const STAFF_URL = "https://pms-crm-backend.onrender.com/api/staff/options";
-const MARKETING_PLANS_URL = "https://pms-crm-backend.onrender.com/api/digitalmarketing/plans";
+const API_URL = "http://15.135.216.211:5000/api/projects/create";
+const CLIENTS_URL = "http://15.135.216.211:5000/api/clients/all";
+const STAFF_URL = "http://15.135.216.211:5000/api/staff/options";
+const MARKETING_PLANS_URL = "http://15.135.216.211:5000/api/digitalmarketing/plans";
 const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
 const AUTH_TOKEN = adminDetails?.token;
-
-const MARKETING_SERVICES = [
-  { id: "social_media", label: "Social Media Management" },
-  { id: "seo", label: "SEO Optimization" },
-  { id: "content", label: "Content Creation" },
-  { id: "ppc", label: "Pay-Per-Click Advertising" },
-  { id: "email", label: "Email Marketing" },
-  { id: "analytics", label: "Analytics & Reporting" },
-  { id: "social_ads", label: "Social Media Advertising" },
-  { id: "influencer", label: "Influencer Marketing" },
-  { id: "video", label: "Video Marketing" },
-  { id: "reputation", label: "Online Reputation Management" },
-];
 
 const DEVELOPMENT_PHASES = [
   { id: "designing", label: "Design", defaultDays: 15 },
   { id: "frontend", label: "Frontend", defaultDays: 25 },
   { id: "backend", label: "Backend", defaultDays: 30 },
   { id: "testing", label: "Testing", defaultDays: 20 },
-  { id: "deployment", label: "Deployment", defaultDays: 10 }
+  { id: "deployment", label: "Deployment", defaultDays: 10 },
+];
+
+// Every key the API expects in workDivision / teamAssignment
+const ALL_PHASE_IDS = [...DEVELOPMENT_PHASES.map((p) => p.id), "marketing"];
+
+const FORM_FIELDS = [
+  "clientName", "mobileNumber", "mailId", "projectName",
+  "projectStartDate", "projectEndDate", "deadline",
+  "projectCost", "gstPercent", "paymentMilestone",
 ];
 
 const AddProject = () => {
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(1);
-
   const [projectType, setProjectType] = useState("software");
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
   const [clients, setClients] = useState([]);
-  const [selectedClient, setSelectedClient] = useState(null);
   const [clientsLoading, setClientsLoading] = useState(true);
+  const [selectedClientId, setSelectedClientId] = useState("");
   const [staff, setStaff] = useState([]);
   const [staffLoading, setStaffLoading] = useState(true);
 
@@ -60,6 +54,7 @@ const AddProject = () => {
     projectEndDate: "",
     deadline: "",
     projectCost: "",
+    gstPercent: "9",
     paymentMilestone: "",
     status: "active",
     category: "software",
@@ -70,7 +65,7 @@ const AddProject = () => {
 
   const [workDivision, setWorkDivision] = useState(() => {
     const division = {};
-    DEVELOPMENT_PHASES.forEach(phase => {
+    DEVELOPMENT_PHASES.forEach((phase) => {
       division[phase.id] = phase.defaultDays;
     });
     return division;
@@ -78,20 +73,15 @@ const AddProject = () => {
 
   const [teamAssignment, setTeamAssignment] = useState(() => {
     const assignment = {};
-    DEVELOPMENT_PHASES.forEach(phase => {
+    DEVELOPMENT_PHASES.forEach((phase) => {
       assignment[phase.id] = [];
     });
     return assignment;
   });
 
   const [marketingTeam, setMarketingTeam] = useState({
-    marketing: {
-      members: [],
-      selectedEmployee: ""
-    }
+    marketing: { members: [], selectedEmployee: "" },
   });
-
-  const [detailErrors, setDetailErrors] = useState({});
 
   useEffect(() => {
     fetchClients();
@@ -105,20 +95,18 @@ const AddProject = () => {
       if (totalDays > 0) {
         const totalDefaultDays = DEVELOPMENT_PHASES.reduce((sum, phase) => sum + phase.defaultDays, 0);
         const newDivision = {};
-        DEVELOPMENT_PHASES.forEach(phase => {
+        DEVELOPMENT_PHASES.forEach((phase) => {
           const proportion = phase.defaultDays / totalDefaultDays;
           newDivision[phase.id] = Math.round(totalDays * proportion);
         });
 
         const sum = Object.values(newDivision).reduce((a, b) => a + b, 0);
         if (sum !== totalDays) {
-          const diff = totalDays - sum;
-          newDivision[DEVELOPMENT_PHASES[0].id] += diff;
+          newDivision[DEVELOPMENT_PHASES[0].id] += totalDays - sum;
         }
 
         setWorkDivision(newDivision);
-
-        setMarketingWorkDays(prev => (prev === "" ? totalDays.toString() : prev));
+        setMarketingWorkDays((prev) => (prev === "" ? totalDays.toString() : prev));
       }
     }
   }, [formData.projectStartDate, formData.deadline]);
@@ -126,9 +114,7 @@ const AddProject = () => {
   const fetchClients = async () => {
     try {
       const response = await fetch(CLIENTS_URL, {
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-        },
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
       });
       const data = await response.json();
       if (response.ok && data.success && data.data) {
@@ -144,9 +130,7 @@ const AddProject = () => {
   const fetchStaff = async () => {
     try {
       const response = await fetch(STAFF_URL, {
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-        },
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
       });
       const data = await response.json();
       if (response.ok && data.success && data.data) {
@@ -162,19 +146,39 @@ const AddProject = () => {
   const fetchMarketingPlans = async () => {
     try {
       const response = await fetch(MARKETING_PLANS_URL, {
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-        },
+        headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
       });
       const data = await response.json();
       if (response.ok && data.success && data.data) {
-        setMarketingPlans(data.data.filter(plan => plan.isActive !== false));
+        setMarketingPlans(data.data.filter((plan) => plan.isActive !== false));
       }
     } catch (error) {
       console.error("Error fetching marketing plans:", error);
     } finally {
       setPlansLoading(false);
     }
+  };
+
+  /* ── Client selection → fills clientId + contact fields ── */
+  const handleClientSelect = (clientId) => {
+    setSelectedClientId(clientId);
+
+    if (!clientId) {
+      // Manual entry mode
+      setFormData((prev) => ({ ...prev, clientName: "", mobileNumber: "", mailId: "" }));
+      return;
+    }
+
+    const client = clients.find((c) => c._id === clientId);
+    if (!client) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      clientName: client.name || "",
+      mobileNumber: client.mobile || "",
+      mailId: client.email || "",
+    }));
+    setErrors((prev) => ({ ...prev, clientName: "", mobileNumber: "", mailId: "" }));
   };
 
   const validateField = (name, value) => {
@@ -217,6 +221,12 @@ const AddProject = () => {
         if (!value) error = "Project cost is required";
         else if (Number(value) < 0) error = "Project cost cannot be negative";
         break;
+      case "gstPercent":
+        if (value === "" || value === null || value === undefined) error = "GST % is required";
+        else if (isNaN(Number(value)) || Number(value) < 0 || Number(value) > 100) {
+          error = "GST % must be between 0 and 100";
+        }
+        break;
       case "paymentMilestone":
         if (!value) error = "Payment milestones are required";
         else if (Number(value) < 0 || !Number.isInteger(Number(value))) {
@@ -230,22 +240,26 @@ const AddProject = () => {
     return error;
   };
 
+  // Returns the errors object so callers don't read stale state
   const validateForm = () => {
     const newErrors = {};
-    const fields = ['clientName', 'mobileNumber', 'mailId', 'projectName', 'projectStartDate', 'projectEndDate', 'deadline', 'projectCost', 'paymentMilestone'];
-    fields.forEach(field => {
+    FORM_FIELDS.forEach((field) => {
       newErrors[field] = validateField(field, formData[field]);
     });
-
     setErrors(newErrors);
-    const hasErrors = Object.values(newErrors).some(error => error);
-    return !hasErrors;
+    return newErrors;
+  };
+
+  const touchAll = () => {
+    const touchedFields = {};
+    FORM_FIELDS.forEach((field) => { touchedFields[field] = true; });
+    setTouched(touchedFields);
   };
 
   const handleBlur = (name) => {
-    setTouched(prev => ({ ...prev, [name]: true }));
+    setTouched((prev) => ({ ...prev, [name]: true }));
     const error = validateField(name, formData[name]);
-    setErrors(prev => ({ ...prev, [name]: error }));
+    setErrors((prev) => ({ ...prev, [name]: error }));
   };
 
   const handleChange = (e) => {
@@ -253,7 +267,7 @@ const AddProject = () => {
     setFormData({ ...formData, [name]: value });
     if (touched[name]) {
       const error = validateField(name, value);
-      setErrors(prev => ({ ...prev, [name]: error }));
+      setErrors((prev) => ({ ...prev, [name]: error }));
     }
   };
 
@@ -262,8 +276,7 @@ const AddProject = () => {
       const start = new Date(formData.projectStartDate);
       const end = new Date(formData.deadline);
       const diffTime = Math.abs(end - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
     return 0;
   };
@@ -274,66 +287,61 @@ const AddProject = () => {
 
     const currentSum = Object.entries(workDivision)
       .filter(([id]) => id !== phaseId)
-      .reduce((sum, [_, val]) => sum + val, 0);
+      .reduce((sum, [, val]) => sum + val, 0);
 
     const maxAllowed = totalDays - currentSum;
     const finalValue = Math.min(maxAllowed, Math.max(0, numValue));
 
-    setWorkDivision(prev => ({
-      ...prev,
-      [phaseId]: finalValue
-    }));
+    setWorkDivision((prev) => ({ ...prev, [phaseId]: finalValue }));
   };
 
   const getAvailableStaffForPhase = (phaseId) => {
-    const assigned = teamAssignment[phaseId] || [];
-    const assignedIds = assigned.map(s => s.employeeId);
-    return staff.filter(s => !assignedIds.includes(s.employeeId));
+    const assignedIds = (teamAssignment[phaseId] || []).map((s) => s.employeeId);
+    return staff.filter((s) => !assignedIds.includes(s.employeeId));
   };
 
   const addTeamMember = (phaseId, employeeId) => {
     if (!employeeId) return;
-    const employee = staff.find(s => s.employeeId === employeeId);
+    const employee = staff.find((s) => s.employeeId === employeeId);
     if (!employee) return;
 
     const currentMembers = teamAssignment[phaseId] || [];
-    if (!currentMembers.find(m => m.employeeId === employee.employeeId)) {
-      setTeamAssignment(prev => ({
+    if (!currentMembers.find((m) => m.employeeId === employee.employeeId)) {
+      setTeamAssignment((prev) => ({
         ...prev,
-        [phaseId]: [...currentMembers, {
-          employeeId: employee.employeeId,
-          name: employee.employeeName,
-          role: phaseId
-        }]
+        [phaseId]: [
+          ...currentMembers,
+          { employeeId: employee.employeeId, name: employee.employeeName, role: phaseId },
+        ],
       }));
     }
   };
 
   const removeTeamMember = (phaseId, employeeId) => {
-    setTeamAssignment(prev => ({
+    setTeamAssignment((prev) => ({
       ...prev,
-      [phaseId]: prev[phaseId].filter(m => m.employeeId !== employeeId)
+      [phaseId]: prev[phaseId].filter((m) => m.employeeId !== employeeId),
     }));
   };
 
-  const selectedPlanObj = marketingPlans.find(p => p._id === selectedPlanId) || null;
-  const selectedDurationObj = selectedPlanObj?.durations.find(d => d._id === selectedDurationId) || null;
+  const selectedPlanObj = marketingPlans.find((p) => p._id === selectedPlanId) || null;
+  const selectedDurationObj = selectedPlanObj?.durations.find((d) => d._id === selectedDurationId) || null;
 
   const handlePlanSelect = (planId) => {
     setSelectedPlanId(planId);
     setSelectedDurationId("");
-    setFormData(prev => ({ ...prev, projectCost: "" }));
+    setFormData((prev) => ({ ...prev, projectCost: "" }));
   };
 
   const handleDurationSelect = (durationId) => {
     setSelectedDurationId(durationId);
-    const plan = marketingPlans.find(p => p._id === selectedPlanId);
-    const duration = plan?.durations.find(d => d._id === durationId);
+    const plan = marketingPlans.find((p) => p._id === selectedPlanId);
+    const duration = plan?.durations.find((d) => d._id === durationId);
     if (duration) {
-      setFormData(prev => ({ ...prev, projectCost: duration.price.toString() }));
+      setFormData((prev) => ({ ...prev, projectCost: duration.price.toString() }));
     }
     if (touched.projectCost) {
-      setErrors(prev => ({ ...prev, projectCost: "" }));
+      setErrors((prev) => ({ ...prev, projectCost: "" }));
     }
   };
 
@@ -341,106 +349,88 @@ const AddProject = () => {
     const team = marketingTeam.marketing;
     if (!team.selectedEmployee) return;
 
-    const employee = staff.find(s => s.employeeId === team.selectedEmployee);
+    const employee = staff.find((s) => s.employeeId === team.selectedEmployee);
     if (!employee) return;
 
-    if (!team.members.find(m => m.employeeId === employee.employeeId)) {
-      setMarketingTeam(prev => ({
+    if (!team.members.find((m) => m.employeeId === employee.employeeId)) {
+      setMarketingTeam((prev) => ({
         ...prev,
         marketing: {
           ...prev.marketing,
-          members: [...prev.marketing.members, {
-            employeeId: employee.employeeId,
-            name: employee.employeeName,
-            role: "marketing"
-          }],
-          selectedEmployee: ""
-        }
+          members: [
+            ...prev.marketing.members,
+            { employeeId: employee.employeeId, name: employee.employeeName, role: "marketing" },
+          ],
+          selectedEmployee: "",
+        },
       }));
     }
   };
 
   const removeMarketingTeamMember = (employeeId) => {
-    setMarketingTeam(prev => ({
+    setMarketingTeam((prev) => ({
       ...prev,
       marketing: {
         ...prev.marketing,
-        members: prev.marketing.members.filter(m => m.employeeId !== employeeId)
-      }
+        members: prev.marketing.members.filter((m) => m.employeeId !== employeeId),
+      },
     }));
   };
 
   const handleMarketingEmployeeSelect = (employeeId) => {
-    setMarketingTeam(prev => ({
+    setMarketingTeam((prev) => ({
       ...prev,
-      marketing: {
-        ...prev.marketing,
-        selectedEmployee: employeeId
-      }
+      marketing: { ...prev.marketing, selectedEmployee: employeeId },
     }));
   };
 
   const getAvailableMarketingStaff = () => {
-    const assignedIds = marketingTeam.marketing.members.map(m => m.employeeId);
-    return staff.filter(s => !assignedIds.includes(s.employeeId));
+    const assignedIds = marketingTeam.marketing.members.map((m) => m.employeeId);
+    return staff.filter((s) => !assignedIds.includes(s.employeeId));
+  };
+
+  const showValidationError = (errs) => {
+    const first = Object.values(errs).find((e) => e);
+    if (first) {
+      Swal.fire({
+        icon: "error",
+        title: "Validation Error",
+        text: first,
+        confirmButtonColor: "#0d9488",
+      });
+    }
   };
 
   const handleNextToPhases = () => {
-    const allFields = ['clientName', 'mobileNumber', 'mailId', 'projectName', 'projectStartDate', 'projectEndDate', 'deadline', 'projectCost', 'paymentMilestone'];
-    const touchedFields = {};
-    allFields.forEach(field => { touchedFields[field] = true; });
-    setTouched(touchedFields);
-
-    if (!validateForm()) {
-      const errorMessages = Object.values(errors).filter(e => e);
-      if (errorMessages.length > 0) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Validation Error',
-          text: errorMessages[0],
-          confirmButtonColor: '#0d9488',
-        });
-      }
+    touchAll();
+    const errs = validateForm();
+    if (Object.values(errs).some((e) => e)) {
+      showValidationError(errs);
       return;
     }
-
     setCurrentStep(2);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const allFields = ['clientName', 'mobileNumber', 'mailId', 'projectName', 'projectStartDate', 'projectEndDate', 'deadline', 'projectCost', 'paymentMilestone'];
-    const touchedFields = {};
-    allFields.forEach(field => { touchedFields[field] = true; });
-    setTouched(touchedFields);
-
-    if (!validateForm()) {
-      const errorMessages = Object.values(errors).filter(e => e);
-      if (errorMessages.length > 0) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Validation Error',
-          text: errorMessages[0],
-          confirmButtonColor: '#0d9488',
-        });
-      }
+    touchAll();
+    const errs = validateForm();
+    if (Object.values(errs).some((e) => e)) {
+      showValidationError(errs);
       return;
     }
 
-    if (projectType === "software" || projectType === "website" || projectType === "app") {
-      let hasMissingTeam = false;
-      DEVELOPMENT_PHASES.forEach(phase => {
-        if (teamAssignment[phase.id].length === 0) {
-          hasMissingTeam = true;
-        }
-      });
+    const isDev = projectType === "software" || projectType === "website" || projectType === "mobile app";
+
+    if (isDev) {
+      const hasMissingTeam = DEVELOPMENT_PHASES.some((phase) => teamAssignment[phase.id].length === 0);
       if (hasMissingTeam) {
         Swal.fire({
-          icon: 'error',
-          title: 'Team Required',
-          text: 'Please assign at least one team member to each phase.',
-          confirmButtonColor: '#0d9488',
+          icon: "error",
+          title: "Team Required",
+          text: "Please assign at least one team member to each phase.",
+          confirmButtonColor: "#0d9488",
         });
         return;
       }
@@ -449,28 +439,28 @@ const AddProject = () => {
     if (projectType === "digital_marketing") {
       if (!selectedPlanId || !selectedDurationId) {
         Swal.fire({
-          icon: 'error',
-          title: 'Plan Required',
-          text: 'Please select a marketing plan and duration.',
-          confirmButtonColor: '#0d9488',
+          icon: "error",
+          title: "Plan Required",
+          text: "Please select a marketing plan and duration.",
+          confirmButtonColor: "#0d9488",
         });
         return;
       }
       if (!marketingWorkDays || Number(marketingWorkDays) <= 0) {
         Swal.fire({
-          icon: 'error',
-          title: 'Work Days Required',
-          text: 'Please enter the marketing work days.',
-          confirmButtonColor: '#0d9488',
+          icon: "error",
+          title: "Work Days Required",
+          text: "Please enter the marketing work days.",
+          confirmButtonColor: "#0d9488",
         });
         return;
       }
       if (marketingTeam.marketing.members.length === 0) {
         Swal.fire({
-          icon: 'error',
-          title: 'Team Required',
-          text: 'Please assign at least one marketing team member.',
-          confirmButtonColor: '#0d9488',
+          icon: "error",
+          title: "Team Required",
+          text: "Please assign at least one marketing team member.",
+          confirmButtonColor: "#0d9488",
         });
         return;
       }
@@ -480,11 +470,13 @@ const AddProject = () => {
 
     try {
       const payload = {
+        ...(selectedClientId ? { clientId: selectedClientId } : {}),
         clientName: formData.clientName.trim(),
         mobileNumber: formData.mobileNumber.trim(),
         mailId: formData.mailId.trim(),
         projectName: formData.projectName.trim(),
         projectCost: Number(formData.projectCost),
+        gstPercent: Number(formData.gstPercent),
         projectStartDate: formData.projectStartDate,
         projectEndDate: formData.projectEndDate,
         deadline: formData.deadline,
@@ -492,16 +484,24 @@ const AddProject = () => {
         category: projectType === "digital_marketing" ? "digital marketing" : projectType,
       };
 
-      if (projectType === "software" || projectType === "website" || projectType === "app") {
+      // Always send every key (unused ones are 0 / [])
+      const fullWorkDivision = {};
+      const fullTeamAssignment = {};
+      ALL_PHASE_IDS.forEach((id) => {
+        fullWorkDivision[id] = 0;
+        fullTeamAssignment[id] = [];
+      });
+
+      if (isDev) {
         const totalDays = calculateTotalDays();
         const totalWorkDays = Object.values(workDivision).reduce((sum, val) => sum + val, 0);
 
         if (totalDays === 0) {
           Swal.fire({
-            icon: 'error',
-            title: 'Invalid Timeline',
-            text: 'Please set a valid start date and deadline.',
-            confirmButtonColor: '#0d9488',
+            icon: "error",
+            title: "Invalid Timeline",
+            text: "Please set a valid start date and deadline.",
+            confirmButtonColor: "#0d9488",
           });
           setLoading(false);
           return;
@@ -509,17 +509,19 @@ const AddProject = () => {
 
         if (totalWorkDays !== totalDays) {
           Swal.fire({
-            icon: 'error',
-            title: 'Work Division Error',
+            icon: "error",
+            title: "Work Division Error",
             text: `Total days (${totalWorkDays}) must equal the project duration (${totalDays} days).`,
-            confirmButtonColor: '#0d9488',
+            confirmButtonColor: "#0d9488",
           });
           setLoading(false);
           return;
         }
 
-        payload.workDivision = workDivision;
-        payload.teamAssignment = teamAssignment;
+        DEVELOPMENT_PHASES.forEach((phase) => {
+          fullWorkDivision[phase.id] = workDivision[phase.id];
+          fullTeamAssignment[phase.id] = teamAssignment[phase.id];
+        });
       }
 
       if (projectType === "digital_marketing") {
@@ -527,13 +529,12 @@ const AddProject = () => {
           planId: selectedPlanObj._id,
           duration: selectedDurationObj.duration,
         };
-        payload.workDivision = {
-          marketing: Number(marketingWorkDays),
-        };
-        payload.teamAssignment = {
-          marketing: marketingTeam.marketing.members,
-        };
+        fullWorkDivision.marketing = Number(marketingWorkDays);
+        fullTeamAssignment.marketing = marketingTeam.marketing.members;
       }
+
+      payload.workDivision = fullWorkDivision;
+      payload.teamAssignment = fullTeamAssignment;
 
       console.log("Sending payload:", JSON.stringify(payload, null, 2));
 
@@ -541,7 +542,7 @@ const AddProject = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${AUTH_TOKEN}`,
+          Authorization: `Bearer ${AUTH_TOKEN}`,
         },
         body: JSON.stringify(payload),
       });
@@ -550,10 +551,10 @@ const AddProject = () => {
 
       if (response.ok && data.success !== false) {
         Swal.fire({
-          icon: 'success',
-          title: 'Project Created!',
+          icon: "success",
+          title: "Project Created!",
           text: `Project "${data.data?.projectName || formData.projectName}" has been created successfully.`,
-          confirmButtonColor: '#0d9488',
+          confirmButtonColor: "#0d9488",
           timer: 2000,
           timerProgressBar: true,
         }).then(() => {
@@ -562,19 +563,19 @@ const AddProject = () => {
       } else {
         const msg = data.errors ? data.errors.join(", ") : data.message || "Failed to create project.";
         Swal.fire({
-          icon: 'error',
-          title: 'Creation Failed',
+          icon: "error",
+          title: "Creation Failed",
           text: msg,
-          confirmButtonColor: '#0d9488',
+          confirmButtonColor: "#0d9488",
         });
       }
     } catch (error) {
       console.error("Submit error:", error);
       Swal.fire({
-        icon: 'error',
-        title: 'Network Error',
-        text: 'Unable to connect to the server. Please check your connection and try again.',
-        confirmButtonColor: '#0d9488',
+        icon: "error",
+        title: "Network Error",
+        text: "Unable to connect to the server. Please check your connection and try again.",
+        confirmButtonColor: "#0d9488",
       });
     } finally {
       setLoading(false);
@@ -583,13 +584,21 @@ const AddProject = () => {
 
   const typeButtons = [
     { value: "website", label: "Website" },
-    { value: "app", label: "App" },
+    { value: "mobile app", label: "App" },
     { value: "software", label: "Software" },
     { value: "digital_marketing", label: "Digital Marketing" },
   ];
 
   const duration = calculateTotalDays();
   const totalWorkDays = Object.values(workDivision).reduce((sum, val) => sum + val, 0);
+
+  // GST preview
+  const costNum = Number(formData.projectCost) || 0;
+  const gstNum = Number(formData.gstPercent) || 0;
+  const gstAmount = (costNum * gstNum) / 100;
+  const totalWithGst = costNum + gstAmount;
+
+  const clientLocked = !!selectedClientId;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50/90 via-white to-teal-100/70">
@@ -655,10 +664,7 @@ const AddProject = () => {
         {/* Main Form */}
         <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-teal-200/30 shadow-xl p-6 lg:p-8">
           <form onSubmit={handleSubmit} className="space-y-8">
-
-            {/* ═══════════════════════════════════════════════════
-                STEP 1 — CLIENT SELECT + PROJECT DETAILS + PROJECT TYPE
-                ═══════════════════════════════════════════════════ */}
+            {/* STEP 1 */}
             {currentStep === 1 && (
               <>
                 <div>
@@ -666,6 +672,31 @@ const AddProject = () => {
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
                     <span className="text-xs font-bold text-teal-600 tracking-widest uppercase whitespace-nowrap">📋 Project Details</span>
                     <div className="flex-1 h-px bg-gradient-to-l from-transparent to-teal-300/30"></div>
+                  </div>
+
+                  {/* Client picker → sets clientId */}
+                  <div className="mb-4">
+                    <label className="text-sm font-semibold text-gray-700 mb-1.5 block">Select Client</label>
+                    <select
+                      value={selectedClientId}
+                      onChange={(e) => handleClientSelect(e.target.value)}
+                      disabled={clientsLoading}
+                      className="w-full h-11 px-4 rounded-xl text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                    >
+                      <option value="">
+                        {clientsLoading ? "Loading clients..." : "— Enter client manually —"}
+                      </option>
+                      {clients.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.name}{c.mobile ? ` (${c.mobile})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {clientLocked && (
+                      <p className="text-xs text-teal-600 mt-1">
+                        Client details are filled from the selected client.
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -677,6 +708,7 @@ const AddProject = () => {
                       onChange={handleChange}
                       onBlur={() => handleBlur("clientName")}
                       error={touched.clientName && errors.clientName}
+                      readOnly={clientLocked}
                       required
                     />
 
@@ -689,6 +721,7 @@ const AddProject = () => {
                       onChange={handleChange}
                       onBlur={() => handleBlur("mobileNumber")}
                       error={touched.mobileNumber && errors.mobileNumber}
+                      readOnly={clientLocked}
                       required
                     />
 
@@ -701,6 +734,7 @@ const AddProject = () => {
                       onChange={handleChange}
                       onBlur={() => handleBlur("mailId")}
                       error={touched.mailId && errors.mailId}
+                      readOnly={clientLocked}
                       required
                     />
 
@@ -715,7 +749,6 @@ const AddProject = () => {
                       required
                     />
 
-                    {/* Project Starts */}
                     <InputField
                       name="projectStartDate"
                       label="Project Starts"
@@ -727,7 +760,6 @@ const AddProject = () => {
                       required
                     />
 
-                    {/* Project Ends */}
                     <InputField
                       name="projectEndDate"
                       label="Project Ends"
@@ -739,7 +771,6 @@ const AddProject = () => {
                       required
                     />
 
-                    {/* Employee Deadline */}
                     <InputField
                       name="deadline"
                       label="Employee Deadline"
@@ -751,7 +782,6 @@ const AddProject = () => {
                       required
                     />
 
-                    {/* Project Cost */}
                     <InputField
                       name="projectCost"
                       label="Project Cost (₹)"
@@ -765,7 +795,21 @@ const AddProject = () => {
                       readOnly={projectType === "digital_marketing" && !!selectedDurationObj}
                     />
 
-                    {/* Payment Milestones */}
+                    <InputField
+                      name="gstPercent"
+                      label="GST (%)"
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      placeholder="e.g. 9"
+                      value={formData.gstPercent}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur("gstPercent")}
+                      error={touched.gstPercent && errors.gstPercent}
+                      required
+                    />
+
                     <InputField
                       name="paymentMilestone"
                       label="Payment Milestones"
@@ -778,6 +822,24 @@ const AddProject = () => {
                       required
                     />
                   </div>
+
+                  {/* GST summary */}
+                  {costNum > 0 && (
+                    <div className="mt-4 grid grid-cols-3 gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200 text-center">
+                      <div>
+                        <p className="text-[11px] text-gray-500 font-semibold uppercase">Cost</p>
+                        <p className="text-sm font-bold text-gray-800">₹{costNum.toLocaleString("en-IN")}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-gray-500 font-semibold uppercase">GST ({gstNum}%)</p>
+                        <p className="text-sm font-bold text-gray-800">₹{gstAmount.toLocaleString("en-IN")}</p>
+                      </div>
+                      <div>
+                        <p className="text-[11px] text-gray-500 font-semibold uppercase">Total</p>
+                        <p className="text-sm font-bold text-teal-700">₹{totalWithGst.toLocaleString("en-IN")}</p>
+                      </div>
+                    </div>
+                  )}
 
                   {duration > 0 && (
                     <div className="mt-4 p-4 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl border border-teal-200">
@@ -797,7 +859,7 @@ const AddProject = () => {
                         </div>
                       </div>
                       <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                        <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-500" style={{ width: '100%' }}></div>
+                        <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full transition-all duration-500" style={{ width: "100%" }}></div>
                       </div>
                     </div>
                   )}
@@ -829,7 +891,7 @@ const AddProject = () => {
                   </div>
                 </div>
 
-                {/* Digital Marketing — plans on Step 1 */}
+                {/* Digital Marketing plans */}
                 {projectType === "digital_marketing" && (
                   <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
                     <div className="flex items-center gap-3 mb-4">
@@ -852,8 +914,8 @@ const AddProject = () => {
                             onClick={() => handlePlanSelect(plan._id)}
                             className={`cursor-pointer rounded-xl p-4 border-2 transition-all ${
                               selectedPlanId === plan._id
-                                ? 'border-teal-500 bg-teal-50 shadow-lg shadow-teal-500/10'
-                                : 'border-gray-200 hover:border-teal-300 hover:shadow-md'
+                                ? "border-teal-500 bg-teal-50 shadow-lg shadow-teal-500/10"
+                                : "border-gray-200 hover:border-teal-300 hover:shadow-md"
                             }`}
                           >
                             <div className="flex items-start justify-between">
@@ -861,9 +923,7 @@ const AddProject = () => {
                                 <Megaphone size={15} className="text-teal-600" />
                                 {plan.planName}
                               </h4>
-                              {selectedPlanId === plan._id && (
-                                <CheckCircle size={20} className="text-teal-600" />
-                              )}
+                              {selectedPlanId === plan._id && <CheckCircle size={20} className="text-teal-600" />}
                             </div>
 
                             <div className="mt-3 flex flex-wrap gap-2">
@@ -878,8 +938,8 @@ const AddProject = () => {
                                   }}
                                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                                     selectedPlanId === plan._id && selectedDurationId === d._id
-                                      ? 'bg-teal-600 text-white border-teal-600'
-                                      : 'bg-white text-gray-600 border-gray-200 hover:border-teal-300'
+                                      ? "bg-teal-600 text-white border-teal-600"
+                                      : "bg-white text-gray-600 border-gray-200 hover:border-teal-300"
                                   }`}
                                 >
                                   {d.duration} · ₹{d.price.toLocaleString()}
@@ -912,7 +972,6 @@ const AddProject = () => {
                   </div>
                 )}
 
-                {/* Step 1 → Next — EQUAL WIDTH BUTTONS */}
                 <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100">
                   <button
                     type="button"
@@ -933,12 +992,10 @@ const AddProject = () => {
               </>
             )}
 
-            {/* ═══════════════════════════════════════════════════
-                STEP 2 — DEVELOPMENT PHASES + SUBMIT
-                ═══════════════════════════════════════════════════ */}
+            {/* STEP 2 */}
             {currentStep === 2 && (
               <>
-                {(projectType === "software" || projectType === "website" || projectType === "app") && (
+                {(projectType === "software" || projectType === "website" || projectType === "mobile app") && (
                   <div className="bg-white/60 rounded-2xl border border-teal-200/30 p-6">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="flex-1 h-px bg-gradient-to-r from-transparent to-teal-300/30"></div>
@@ -963,11 +1020,11 @@ const AddProject = () => {
                         ))}
                       </div>
                       <div className="mt-2 flex justify-between items-center">
-                        <span className={`text-sm font-medium ${totalWorkDays === duration ? 'text-green-600' : 'text-red-500'}`}>
+                        <span className={`text-sm font-medium ${totalWorkDays === duration ? "text-green-600" : "text-red-500"}`}>
                           Total: {totalWorkDays} days
                         </span>
-                        <span className={`text-sm font-medium ${totalWorkDays === duration ? 'text-green-600' : 'text-red-500'}`}>
-                          {totalWorkDays === duration ? '✓ Balanced' : `Needs ${duration - totalWorkDays} more days`}
+                        <span className={`text-sm font-medium ${totalWorkDays === duration ? "text-green-600" : "text-red-500"}`}>
+                          {totalWorkDays === duration ? "✓ Balanced" : `Needs ${duration - totalWorkDays} more days`}
                         </span>
                       </div>
                       {duration === 0 && (
@@ -988,33 +1045,27 @@ const AddProject = () => {
                               <span className="text-xs text-gray-500">{teamAssignment[phase.id].length} members</span>
                             </div>
 
-                            <div className="flex gap-2 mb-3">
+                            {/* Selecting a staff member adds them immediately */}
+                            <div className="mb-3">
                               <select
                                 value=""
                                 onChange={(e) => addTeamMember(phase.id, e.target.value)}
-                                className="flex-1 h-9 px-3 rounded-lg text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
+                                className="w-full h-9 px-3 rounded-lg text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
                                 disabled={staffLoading || availableStaff.length === 0}
                               >
-                                <option value="">{staffLoading ? "Loading staff..." : availableStaff.length === 0 ? "No staff available" : "Select staff..."}</option>
+                                <option value="">
+                                  {staffLoading
+                                    ? "Loading staff..."
+                                    : availableStaff.length === 0
+                                    ? "No staff available"
+                                    : "Select staff to add..."}
+                                </option>
                                 {availableStaff.map((s) => (
                                   <option key={s.employeeId} value={s.employeeId}>
                                     {s.employeeName} ({s.role})
                                   </option>
                                 ))}
                               </select>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const select = document.querySelector(`[data-phase="${phase.id}"]`);
-                                  if (select && select.value) {
-                                    addTeamMember(phase.id, select.value);
-                                    select.value = "";
-                                  }
-                                }}
-                                className="flex items-center gap-1 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold transition-colors"
-                              >
-                                <UserPlus size={14} /> Add
-                              </button>
                             </div>
 
                             <div className="flex flex-wrap gap-2">
@@ -1078,7 +1129,13 @@ const AddProject = () => {
                             className="flex-1 h-9 px-3 rounded-lg text-sm text-gray-700 bg-white border-2 border-teal-200/50 focus:border-teal-500 focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"
                             disabled={staffLoading || getAvailableMarketingStaff().length === 0}
                           >
-                            <option value="">{staffLoading ? "Loading staff..." : getAvailableMarketingStaff().length === 0 ? "No staff available" : "Select staff..."}</option>
+                            <option value="">
+                              {staffLoading
+                                ? "Loading staff..."
+                                : getAvailableMarketingStaff().length === 0
+                                ? "No staff available"
+                                : "Select staff..."}
+                            </option>
                             {getAvailableMarketingStaff().map((s) => (
                               <option key={s.employeeId} value={s.employeeId}>
                                 {s.employeeName} ({s.role})
@@ -1120,7 +1177,6 @@ const AddProject = () => {
                   </div>
                 )}
 
-                {/* Step 2 → Back + Submit — EQUAL WIDTH BUTTONS */}
                 <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-gray-100">
                   <button
                     type="button"
@@ -1157,8 +1213,10 @@ const InputField = ({ label, error, className = "", ...props }) => (
     {label && <label className="text-sm font-semibold text-gray-700 mb-1.5 block">{label}</label>}
     <input
       {...props}
-      className={`w-full h-11 px-4 rounded-xl text-sm text-gray-700 bg-white border-2 ${
-        error ? 'border-red-400 focus:border-red-500' : 'border-teal-200/50 focus:border-teal-500'
+      className={`w-full h-11 px-4 rounded-xl text-sm text-gray-700 border-2 ${
+        props.readOnly ? "bg-gray-50" : "bg-white"
+      } ${
+        error ? "border-red-400 focus:border-red-500" : "border-teal-200/50 focus:border-teal-500"
       } focus:outline-none focus:ring-4 focus:ring-teal-500/10 transition-all ${className}`}
     />
     {error && <p className="text-xs text-red-500 mt-1">{error}</p>}

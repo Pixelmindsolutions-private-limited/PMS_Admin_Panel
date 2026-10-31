@@ -12,7 +12,7 @@ const ProjectNav = () => {
     useEffect(() => {
         const fetchProjects = async () => {
             try {
-                const res = await fetch('https://pms-crm-backend.onrender.com/api/projects');
+                const res = await fetch('http://15.135.216.211:5000/api/projects');
                 const data = await res.json();
                 if (data.success) {
                     setProjects(data.data);
@@ -29,7 +29,7 @@ const ProjectNav = () => {
     const handleProjectClick = async (projectId) => {
         setModalLoading(true);
         try {
-            const res = await fetch(`https://pms-crm-backend.onrender.com/api/project/${projectId}`);
+            const res = await fetch(`http://15.135.216.211:5000/api/project/${projectId}`);
             const data = await res.json();
             if (data.success) {
                 setSelectedProject(data.data);

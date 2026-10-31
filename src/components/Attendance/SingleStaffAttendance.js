@@ -27,8 +27,8 @@ ChartJS.register(
 /* ──────────────────────────────────────────── */
 /*  CONFIG                                      */
 /* ──────────────────────────────────────────── */
-const EMPLOYEE_COMPLETE_API = "https://pms-crm-backend.onrender.com/api/attendance/employee";
-const ATTENDANCE_API = "https://pms-crm-backend.onrender.com/api/attendance";
+const EMPLOYEE_COMPLETE_API = "http://15.135.216.211:5000/api/attendance/employee";
+const ATTENDANCE_API = "http://15.135.216.211:5000/api/attendance";
 
 const loginDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 

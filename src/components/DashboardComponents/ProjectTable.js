@@ -13,7 +13,7 @@ const ProjectsTable = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const res = await fetch("https://pms-crm-backend.onrender.com/api/projects");
+        const res = await fetch("http://15.135.216.211:5000/api/projects");
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
           setProjects(data.data);

@@ -34,7 +34,7 @@ const AddAttendance = () => {
         }
 
         const res = await axios.get(
-          "https://pms-crm-backend.onrender.com/api/attendance/staff-options",
+          "http://15.135.216.211:5000/api/attendance/staff-options",
           {
             headers: {
               Authorization: `Bearer ${AUTH_TOKEN}`,
@@ -107,7 +107,7 @@ const AddAttendance = () => {
       setSubmitting(true);
 
       const res = await axios.post(
-        "https://pms-crm-backend.onrender.com/api/attendance/",
+        "http://15.135.216.211:5000/api/attendance/",
         payload,
         {
           headers: {
