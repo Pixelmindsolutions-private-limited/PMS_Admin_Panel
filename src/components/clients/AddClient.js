@@ -12,6 +12,7 @@ const REQUIREMENT_OPTIONS = [
   "Static Website",
   "Digital Marketing",
   "Web Application",
+  "Mobile Application",
   "Maintenance",
   "Other",
 ];
@@ -44,7 +45,8 @@ const AddClient = () => {
         } else if (value.trim().length < 2) {
           error = "Client name must be at least 2 characters";
         } else if (!/^[a-zA-Z\s\-\.]+$/.test(value.trim())) {
-          error = "Client name can only contain letters, spaces, hyphens, and dots";
+          error =
+            "Client name can only contain letters, spaces, hyphens, and dots";
         }
         break;
 
@@ -54,7 +56,8 @@ const AddClient = () => {
         } else {
           const mobileRegex = /^\+?[0-9]{10,15}$/;
           if (!mobileRegex.test(value.trim())) {
-            error = "Mobile number must be 10-15 digits (e.g., +1987654321 or 9876543210)";
+            error =
+              "Mobile number must be 10-15 digits (e.g., +1987654321 or 9876543210)";
           }
         }
         break;
@@ -318,7 +321,9 @@ const AddClient = () => {
       {toast && (
         <div
           className={`toast-in fixed top-4 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl font-semibold text-sm max-w-sm ${
-            toast.type === "success" ? "bg-emerald-600 text-white" : "bg-red-600 text-white"
+            toast.type === "success"
+              ? "bg-emerald-600 text-white"
+              : "bg-red-600 text-white"
           }`}
         >
           {toast.type === "success" ? (

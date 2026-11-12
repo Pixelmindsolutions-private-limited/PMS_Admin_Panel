@@ -460,11 +460,31 @@ const AllClients = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {paginated.map((client) => {
                   const reqList = toReqArray(client.requirement);
+                  const leadStatus = normalizeLeadStatus(
+                    client.leadStatus || client.status || client.lead,
+                  );
+
                   return (
                     <div
                       key={client._id}
-                      className="client-card bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm"
+                      className="client-card relative bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm"
                     >
+                      {/* Cancelled Corner Ribbon */}
+                      {leadStatus === "Cancelled" && (
+                        <div className="absolute top-0 right-0 z-10 w-28 h-28 overflow-hidden pointer-events-none">
+                          <div className="absolute top-5 -right-8 w-36 rotate-45 bg-red-500 text-white text-[10px] font-extrabold text-center py-1.5 shadow-md tracking-wider">
+                            CANCELLED
+                          </div>
+                        </div>
+                      )}
+                      {leadStatus === "Converted" && (
+                        <div className="absolute top-0 right-0 z-10 w-28 h-28 overflow-hidden pointer-events-none">
+                          <div className="absolute top-5 -right-8 w-36 rotate-45 bg-green-500 text-white text-[10px] font-extrabold text-center py-1.5 shadow-md tracking-wider">
+                            CONVERTED
+                          </div>
+                        </div>
+                      )}
+
                       <div className="p-4">
                         <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white text-lg font-bold shadow-lg shadow-teal-500/20 mb-2.5">
                           {client.name?.charAt(0).toUpperCase() || "?"}
@@ -481,12 +501,14 @@ const AllClients = () => {
                               <span className="truncate">{client.mobile}</span>
                             </div>
                           )}
+
                           {client.email && (
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <FaEnvelope size={12} className="text-teal-500" />
                               <span className="truncate">{client.email}</span>
                             </div>
                           )}
+
                           {client.address && (
                             <div className="flex items-center gap-2 text-sm text-gray-600">
                               <FaMapMarkerAlt
@@ -519,6 +541,7 @@ const AllClients = () => {
                                 ⚡ {r}
                               </span>
                             ))}
+
                             {reqList.length > 3 && (
                               <span className="inline-flex items-center text-[11px] font-semibold bg-gray-100 text-gray-600 border border-gray-200 rounded-full px-2 py-0.5">
                                 +{reqList.length - 3}
@@ -535,12 +558,14 @@ const AllClients = () => {
                         >
                           <MdVisibility size={14} /> View
                         </button>
+
                         <button
                           onClick={() => navigate(`/edit-client/${client._id}`)}
                           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-xs transition-all"
                         >
                           <MdEdit size={14} /> Edit
                         </button>
+
                         <button
                           onClick={() => setDeleteId(client._id)}
                           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs transition-all"
