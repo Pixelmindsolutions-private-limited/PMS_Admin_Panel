@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import { UserPlus, X, CheckCircle, AlertCircle, Loader } from "lucide-react";
 
 const API_URL = "http://15.135.216.211:5000/api/clients";
-const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
+const adminDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 const AUTH_TOKEN = adminDetails?.token;
 
 const REQUIREMENT_OPTIONS = [

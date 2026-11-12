@@ -1,7 +1,7 @@
 ﻿// // src/utils/auth.js
 // export const getAuthToken = () => {
 //   try {
-//     const adminDetails = sessionStorage.getItem("adminDetails");
+//     const adminDetails = sessionStorage.getItem("loginDetails");
 //     if (!adminDetails) return null;
 //     const parsed = JSON.parse(adminDetails);
 //     return parsed.token || null;
@@ -28,7 +28,7 @@ export const API_BASE = "http://15.135.216.211:5000/api" ;
 export const API_BASE_URL = "http://15.135.216.211:5000/api" ;
 
 const getAuthToken = () => {
-  for (const key of ["loginDetails", "adminDetails"]) {
+  for (const key of ["loginDetails", "loginDetails"]) {
     try {
       const details = JSON.parse(sessionStorage.getItem(key) || "null");
       if (details?.token) return details.token;

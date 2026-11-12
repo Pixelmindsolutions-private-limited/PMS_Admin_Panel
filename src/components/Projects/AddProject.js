@@ -7,7 +7,7 @@ const API_URL = "http://15.135.216.211:5000/api/projects/create";
 const CLIENTS_URL = "http://15.135.216.211:5000/api/clients/all";
 const STAFF_URL = "http://15.135.216.211:5000/api/staff/options";
 const MARKETING_PLANS_URL = "http://15.135.216.211:5000/api/digitalmarketing/plans";
-const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
+const adminDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 const AUTH_TOKEN = adminDetails?.token;
 
 const DEVELOPMENT_PHASES = [
@@ -112,20 +112,26 @@ const AddProject = () => {
   }, [formData.projectStartDate, formData.deadline]);
 
   const fetchClients = async () => {
-    try {
-      const response = await fetch(CLIENTS_URL, {
-        headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
-      });
-      const data = await response.json();
-      if (response.ok && data.success && data.data) {
-        setClients(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-    } finally {
-      setClientsLoading(false);
+  try {
+    const response = await fetch(CLIENTS_URL, {
+      headers: { Authorization: `Bearer ${AUTH_TOKEN}` },
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success && data.data) {
+      setClients(
+        data.data.filter(
+          (client) => client.leadStatus?.toLowerCase() === "converted"
+        )
+      );
     }
-  };
+  } catch (error) {
+    console.error("Error fetching clients:", error);
+  } finally {
+    setClientsLoading(false);
+  }
+};
 
   const fetchStaff = async () => {
     try {

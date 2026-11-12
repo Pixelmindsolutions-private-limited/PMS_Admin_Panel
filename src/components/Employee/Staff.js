@@ -75,38 +75,69 @@ const Staff = () => {
 
   // Fetch staff from backend
   const fetchStaff = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${API_BASE_URL}/all`, {
-        headers: {
-          Authorization: `Bearer ${AUTH_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-      });
+  setLoading(true);
+  setError(null);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+  try {
+    const firstResponse = await fetch(`${API_BASE_URL}/all`, {
+      headers: {
+        Authorization: `Bearer ${AUTH_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+    });
 
-      const json = await response.json();
-
-      if (json.success && Array.isArray(json.data)) {
-        setStaffList(json.data);
-      } else {
-        throw new Error("Invalid response format");
-      }
-    } catch (err) {
-      console.error("Fetch error:", err);
-      setError(err.message || "Failed to fetch staff data");
-    } finally {
-      setLoading(false);
+    if (!firstResponse.ok) {
+      throw new Error(`HTTP error! status: ${firstResponse.status}`);
     }
-  };
 
-  useEffect(() => {
-    fetchStaff();
-  }, []);
+    const firstJson = await firstResponse.json();
+
+    if (!firstJson.success || !Array.isArray(firstJson.data)) {
+      throw new Error("Invalid response format");
+    }
+
+    let allStaff = [...firstJson.data];
+
+    const totalPages = firstJson.pagination?.pages || 1;
+
+    // Fetch remaining API pages
+    if (totalPages > 1) {
+      const remainingRequests = [];
+
+      for (let page = 2; page <= totalPages; page++) {
+        remainingRequests.push(
+          fetch(`${API_BASE_URL}/all?page=${page}`, {
+            headers: {
+              Authorization: `Bearer ${AUTH_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+          }).then(async (response) => {
+            if (!response.ok) {
+              throw new Error(`Failed to fetch page ${page}`);
+            }
+
+            return response.json();
+          })
+        );
+      }
+
+      const remainingResponses = await Promise.all(remainingRequests);
+
+      remainingResponses.forEach((json) => {
+        if (json.success && Array.isArray(json.data)) {
+          allStaff = [...allStaff, ...json.data];
+        }
+      });
+    }
+
+    setStaffList(allStaff);
+  } catch (err) {
+    console.error("Fetch error:", err);
+    setError(err.message || "Failed to fetch staff data");
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Statistics calculation
   const stats = useMemo(() => {

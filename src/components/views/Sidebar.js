@@ -46,7 +46,7 @@ const getLoggedInUser = () => {
     const loginDetails = sessionStorage.getItem('loginDetails');
     if (loginDetails) return JSON.parse(loginDetails);
 
-    const adminDetails = sessionStorage.getItem('adminDetails');
+    const adminDetails = sessionStorage.getItem('loginDetails');
     if (adminDetails) return JSON.parse(adminDetails);
   } catch (err) {
     console.error('Failed to parse logged-in user from session storage:', err);

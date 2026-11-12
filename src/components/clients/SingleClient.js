@@ -6,7 +6,7 @@ import * as XLSX from 'xlsx';
 import { API_BASE } from '../../utils/Auth';
 
 const API_URL = `${API_BASE}/clients`;
-const adminDetails = JSON.parse(sessionStorage.getItem('adminDetails'));
+const adminDetails = JSON.parse(sessionStorage.getItem('loginDetails'));
 const AUTH_TOKEN = adminDetails?.token;
 
 const SingleClient = () => {

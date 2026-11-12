@@ -27,7 +27,7 @@ const getAuthConfig = (extra = {}) => {
   try {
     details =
       JSON.parse(sessionStorage.getItem("loginDetails") || "null") ||
-      JSON.parse(sessionStorage.getItem("adminDetails") || "null");
+      JSON.parse(sessionStorage.getItem("loginDetails") || "null");
   } catch {
     details = null;
   }

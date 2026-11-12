@@ -36,7 +36,7 @@ import {
 
 const API_BASE_URL = "http://15.135.216.211:5000/api/admin-staff";
 
-const adminDetails = JSON.parse(sessionStorage.getItem("adminDetails"));
+const adminDetails = JSON.parse(sessionStorage.getItem("loginDetails"));
 const AUTH_TOKEN = adminDetails?.token;
 
 // Menu items for module permissions with detailed items
