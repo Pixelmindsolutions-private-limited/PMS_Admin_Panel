@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   MdDashboard,
   MdPeople,
@@ -20,43 +20,47 @@ import {
   MdTimer,
   MdTrendingUp,
   MdPersonAdd,
-} from 'react-icons/md';
+  MdMessage,
+  MdGroup,
+  MdOutlineGroupAdd,
+  MdGroupWork,
+} from "react-icons/md";
 
 /* ------------------------------------------------------------------ */
 /*  Access helpers                                                     */
 /* ------------------------------------------------------------------ */
 
 const COMPONENT_KEY_MAP = {
-  dashboard: 'dashboard',
-  staff: 'staffManagement',
-  clients: 'clients',
-  projects: 'projects',
-  installments: 'installments',
-  'assigned-works': 'assignedWorks',
-  attendance: 'attendance',
-  'work-session': 'workSession',
-  invoice: 'invoice',
-  payslip: 'payslip',
-  'employee-access': 'employeeAccess',
-  settings: 'settings',
+  dashboard: "dashboard",
+  staff: "staffManagement",
+  clients: "clients",
+  projects: "projects",
+  installments: "installments",
+  "assigned-works": "assignedWorks",
+  attendance: "attendance",
+  "work-session": "workSession",
+  invoice: "invoice",
+  payslip: "payslip",
+  "employee-access": "employeeAccess",
+  settings: "settings",
 };
 
 const getLoggedInUser = () => {
   try {
-    const loginDetails = sessionStorage.getItem('loginDetails');
+    const loginDetails = sessionStorage.getItem("loginDetails");
     if (loginDetails) return JSON.parse(loginDetails);
 
-    const adminDetails = sessionStorage.getItem('loginDetails');
+    const adminDetails = sessionStorage.getItem("loginDetails");
     if (adminDetails) return JSON.parse(adminDetails);
   } catch (err) {
-    console.error('Failed to parse logged-in user from session storage:', err);
+    console.error("Failed to parse logged-in user from session storage:", err);
   }
   return null;
 };
 
 const isAdminRole = (role) => {
   if (!role) return false;
-  return role.toString().trim().toLowerCase() === 'admin';
+  return role.toString().trim().toLowerCase() === "admin";
 };
 
 const hasModuleAccess = (modulePermissions, componentKey) => {
@@ -64,7 +68,7 @@ const hasModuleAccess = (modulePermissions, componentKey) => {
   const module = modulePermissions.find((m) => m.component === componentKey);
   if (!module || !Array.isArray(module.items)) return false;
   return module.items.some(
-    (item) => Array.isArray(item.permission) && item.permission.length > 0
+    (item) => Array.isArray(item.permission) && item.permission.length > 0,
   );
 };
 
@@ -74,43 +78,79 @@ const hasModuleAccess = (modulePermissions, componentKey) => {
 
 const ALL_MENU_ITEMS = [
   {
-    path: '/dashboard',
-    label: 'Dashboard',
+    path: "/dashboard",
+    label: "Dashboard",
     icon: <MdDashboard />,
-    description: 'Overview & analytics',
-    moduleKey: 'dashboard',
+    description: "Overview & analytics",
+    moduleKey: "dashboard",
   },
   {
-    id: 'staff',
-    label: 'Staff Management',
+    id: "staff",
+    label: "Staff Management",
     icon: <MdPeople />,
-    description: 'Manage team members',
-    moduleKey: 'staff',
+    description: "Manage team members",
+    moduleKey: "staff",
     submenu: [
-      { path: '/add-staff', label: 'Add Staff', icon: <MdAddCircleOutline />, description: 'Create new profile', access: 'manage' },
-      { path: '/staff', label: 'Staff Directory', icon: <MdListAlt />, description: 'View all members', access: 'view' },
+      {
+        path: "/add-staff",
+        label: "Add Staff",
+        icon: <MdAddCircleOutline />,
+        description: "Create new profile",
+        access: "manage",
+      },
+      {
+        path: "/staff",
+        label: "Staff Directory",
+        icon: <MdListAlt />,
+        description: "View all members",
+        access: "view",
+      },
     ],
   },
   {
-    id: 'clients',
-    label: 'Leads',
+    id: "clients",
+    label: "Leads",
     icon: <MdFolder />,
-    description: 'Leads',
-    moduleKey: 'clients',
+    description: "Leads",
+    moduleKey: "clients",
     submenu: [
-      { path: '/add-client', label: 'New Lead', icon: <MdAddCircleOutline />, description: 'Create Lead', access: 'manage' },
-      { path: '/allclients', label: 'Lead List', icon: <MdListAlt />, description: 'All Leads', access: 'view' },
+      {
+        path: "/add-client",
+        label: "New Lead",
+        icon: <MdAddCircleOutline />,
+        description: "Create Lead",
+        access: "manage",
+      },
+      {
+        path: "/allclients",
+        label: "Lead List",
+        icon: <MdListAlt />,
+        description: "All Leads",
+        access: "view",
+      },
     ],
   },
   {
-    id: 'projects',
-    label: 'Projects',
+    id: "projects",
+    label: "Projects",
     icon: <MdFolder />,
-    description: 'Track progress',
-    moduleKey: 'projects',
+    description: "Track progress",
+    moduleKey: "projects",
     submenu: [
-      { path: '/add-project', label: 'New Project', icon: <MdAddCircleOutline />, description: 'Create project', access: 'manage' },
-      { path: '/projects', label: 'Project List', icon: <MdListAlt />, description: 'All projects', access: 'view' },
+      {
+        path: "/add-project",
+        label: "New Project",
+        icon: <MdAddCircleOutline />,
+        description: "Create project",
+        access: "manage",
+      },
+      {
+        path: "/projects",
+        label: "Project List",
+        icon: <MdListAlt />,
+        description: "All projects",
+        access: "view",
+      },
     ],
   },
   // {
@@ -146,52 +186,145 @@ const ALL_MENU_ITEMS = [
   //   ],
   // },
   {
-    id: 'work-session',
-    label: 'Work Session',
+    id: "work-session",
+    label: "Work Session",
     icon: <MdTimelapse />,
-    description: 'Time tracking & activity',
-    moduleKey: 'work-session',
+    description: "Time tracking & activity",
+    moduleKey: "work-session",
     submenu: [
       // { path: '/work-session-live', label: 'Live Tracking', icon: <MdAccessTime />, description: 'Real-time status', access: 'view' },
-      { path: '/work-session-history', label: 'Session History', icon: <MdTimer />, description: 'View records', access: 'view' },
-      { path: '/work-session-reports', label: 'Work Reports', icon: <MdTrendingUp />, description: 'Analytics', access: 'view' },
+      {
+        path: "/work-session-history",
+        label: "Session History",
+        icon: <MdTimer />,
+        description: "View records",
+        access: "view",
+      },
+      {
+        path: "/work-session-reports",
+        label: "Work Reports",
+        icon: <MdTrendingUp />,
+        description: "Analytics",
+        access: "view",
+      },
     ],
   },
   {
-    id: 'invoice',
-    label: 'Invoicing',
+    id: "invoice",
+    label: "Invoicing",
     icon: <MdFolder />,
-    description: 'Billing & payments',
-    moduleKey: 'invoice',
+    description: "Billing & payments",
+    moduleKey: "invoice",
     submenu: [
-      { path: '/create-invoice', label: 'Create Invoice', icon: <MdAddCircleOutline />, description: 'New invoice', access: 'manage' },
-      { path: '/invoices', label: 'Invoice List', icon: <MdListAlt />, description: 'All invoices', access: 'view' },
+      {
+        path: "/create-invoice",
+        label: "Create Invoice",
+        icon: <MdAddCircleOutline />,
+        description: "New invoice",
+        access: "manage",
+      },
+      {
+        path: "/invoices",
+        label: "Invoice List",
+        icon: <MdListAlt />,
+        description: "All invoices",
+        access: "view",
+      },
     ],
   },
 ];
 
 const BOTTOM_MENU_ITEMS = [
   {
-    id: 'employee-access',
-    label: 'Employee-Access',
-    icon: <MdInsights />,
-    description: 'Page Permissions',
-    moduleKey: 'employee-access',
+    id: "group",
+    label: "Message Groups",
+    icon: <MdGroup />,
+    description: "Groups Creation",
+    moduleKey: "chats",
     submenu: [
-      { path: '/add-employee-access', label: 'Add Employee Access', icon: <MdPersonAdd />, description: 'Add permissions', access: 'manage' },
-      { path: '/employee-access', label: 'Employee Access', icon: <MdListAlt />, description: 'Manage permissions', access: 'view' },
+      {
+        path: "/add-group",
+        label: "Add Group",
+        icon: <MdOutlineGroupAdd />,
+        description: "Add Groups",
+        access: "manage",
+      },
+      {
+        path: "/groups",
+        label: "All Groups",
+        icon: <MdGroupWork />,
+        description: "Manage Groups",
+        access: "view",
+      },
     ],
   },
   {
-    id: 'settings',
-    label: 'Settings',
-    icon: <MdSettings />,
-    description: 'Preferences',
-    moduleKey: 'settings',
+    id: "chats",
+    label: "Messages",
+    icon: <MdMessage />,
+    description: "Chat History",
+    moduleKey: "chats",   
     submenu: [
-      { path: '/marketing-plans', label: 'Digital Marketing', icon: <MdSettings />, description: 'Package Management', access: 'view' },
-      { path: 'company-info', label: 'Company Info', icon: <MdFolder />, description: 'company details', access: 'view' },
-      { path: '/settings/notifications', label: 'Notifications', icon: <MdListAlt />, description: 'Alert preferences', access: 'view' },
+      {
+        path: "/chat",
+        label: "All Chats",
+        icon: <MdMessage />,
+        description: "All Chat History",
+        access: "manage",
+      }
+    ],
+  },
+  {
+    id: "employee-access",
+    label: "Employee-Access",
+    icon: <MdInsights />,
+    description: "Page Permissions",
+    moduleKey: "employee-access",
+    submenu: [
+      {
+        path: "/add-employee-access",
+        label: "Add Employee Access",
+        icon: <MdPersonAdd />,
+        description: "Add permissions",
+        access: "manage",
+      },
+      {
+        path: "/employee-access",
+        label: "Employee Access",
+        icon: <MdListAlt />,
+        description: "Manage permissions",
+        access: "view",
+      },
+    ],
+  },
+  {
+    id: "settings",
+    label: "Settings",
+    icon: <MdSettings />,
+    description: "Preferences",
+    moduleKey: "settings",
+    submenu: [
+      {
+        path: "/marketing-plans",
+        label: "Digital Marketing",
+        icon: <MdSettings />,
+        description: "Package Management",
+        access: "view",
+      },
+      {
+        path: "company-info",
+        label: "Company Info",
+        icon: <MdFolder />,
+        description: "company details",
+        access: "view",
+      },
+      {
+        path: "/settings/notifications",
+        label: "Notifications",
+        icon: <MdListAlt />,
+        description: "Alert preferences",
+        access: "view",
+      },
     ],
   },
 ];
@@ -211,7 +344,10 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
 
   const { visibleMenuItems, visibleBottomItems } = useMemo(() => {
     if (admin) {
-      return { visibleMenuItems: ALL_MENU_ITEMS, visibleBottomItems: BOTTOM_MENU_ITEMS };
+      return {
+        visibleMenuItems: ALL_MENU_ITEMS,
+        visibleBottomItems: BOTTOM_MENU_ITEMS,
+      };
     }
 
     const filterForStaff = (items) =>
@@ -225,7 +361,7 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
           return acc;
         }
 
-        const submenu = item.submenu.filter((sub) => sub.access === 'view');
+        const submenu = item.submenu.filter((sub) => sub.access === "view");
         if (submenu.length === 0) return acc;
 
         acc.push({ ...item, submenu });
@@ -246,13 +382,13 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
 
     // Find the item whose submenu contains the current pathname
     const matchedItem = allItems.find((item) =>
-      item.submenu?.some((sub) => sub.path === location.pathname)
+      item.submenu?.some((sub) => sub.path === location.pathname),
     );
 
     if (matchedItem) {
       // Only update if different — prevents resetting manual toggle on unrelated re-renders
       setOpenMenu((current) =>
-        current === matchedItem.id ? current : matchedItem.id
+        current === matchedItem.id ? current : matchedItem.id,
       );
     }
     // NOTE: if no submenu matches, we intentionally do NOT reset openMenu.
@@ -267,7 +403,7 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
 
   const handleLogout = () => {
     const loginDetails = JSON.parse(
-      sessionStorage.getItem("loginDetails") || "{}"
+      sessionStorage.getItem("loginDetails") || "{}",
     );
 
     const role = loginDetails.role;
@@ -290,7 +426,12 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
   };
 
   const renderMenuItem = (item, index, animationName) => (
-    <div key={item.id || item.path} style={{ animation: `${animationName} 0.3s ease ${index * 0.05}s backwards` }}>
+    <div
+      key={item.id || item.path}
+      style={{
+        animation: `${animationName} 0.3s ease ${index * 0.05}s backwards`,
+      }}
+    >
       {item.submenu ? (
         <>
           <div
@@ -302,12 +443,28 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
                 {item.icon}
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="font-semibold text-xs sm:text-sm truncate">{item.label}</span>
-                <span className="text-[8px] sm:text-[10px] opacity-60 truncate">{item.description}</span>
+                <span className="font-semibold text-xs sm:text-sm truncate">
+                  {item.label}
+                </span>
+                <span className="text-[8px] sm:text-[10px] opacity-60 truncate">
+                  {item.description}
+                </span>
               </div>
             </div>
-            <span className={`transition-transform duration-400 opacity-70 shrink-0 ml-1 ${openMenu === item.id ? 'rotate-180' : 'rotate-0'}`}>
-              {openMenu === item.id ? <MdExpandLess size={16} className="sm:text-[18px] md:text-[20px]" /> : <MdExpandMore size={16} className="sm:text-[18px] md:text-[20px]" />}
+            <span
+              className={`transition-transform duration-400 opacity-70 shrink-0 ml-1 ${openMenu === item.id ? "rotate-180" : "rotate-0"}`}
+            >
+              {openMenu === item.id ? (
+                <MdExpandLess
+                  size={16}
+                  className="sm:text-[18px] md:text-[20px]"
+                />
+              ) : (
+                <MdExpandMore
+                  size={16}
+                  className="sm:text-[18px] md:text-[20px]"
+                />
+              )}
             </span>
           </div>
 
@@ -317,19 +474,26 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
                 <Link
                   key={subItem.path}
                   to={subItem.path}
-                  className={`flex items-center px-3 sm:px-4 py-2 sm:py-2.5 my-0.5 sm:my-1 text-white/75 rounded-xl transition-all duration-300 text-[11px] sm:text-[13px] relative hover:bg-teal-400/15 hover:text-white hover:pl-4 sm:hover:pl-[22px] ${location.pathname === subItem.path
-                      ? 'bg-teal-400/20 text-white border-l-2 sm:border-l-3 border-teal-400 rounded-l-xl'
-                      : ''
-                    }`}
+                  className={`flex items-center px-3 sm:px-4 py-2 sm:py-2.5 my-0.5 sm:my-1 text-white/75 rounded-xl transition-all duration-300 text-[11px] sm:text-[13px] relative hover:bg-teal-400/15 hover:text-white hover:pl-4 sm:hover:pl-[22px] ${
+                    location.pathname === subItem.path
+                      ? "bg-teal-400/20 text-white border-l-2 sm:border-l-3 border-teal-400 rounded-l-xl"
+                      : ""
+                  }`}
                   onClick={handleLinkClick}
-                  style={{ animation: `slideInSubmenu 0.2s ease ${subIndex * 0.03}s backwards` }}
+                  style={{
+                    animation: `slideInSubmenu 0.2s ease ${subIndex * 0.03}s backwards`,
+                  }}
                 >
                   <span className="mr-2 sm:mr-3.5 text-sm sm:text-base opacity-90 shrink-0">
                     {subItem.icon}
                   </span>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] sm:text-[13px] font-medium truncate">{subItem.label}</span>
-                    <span className="text-[8px] sm:text-[10px] opacity-60 truncate">{subItem.description}</span>
+                    <span className="text-[11px] sm:text-[13px] font-medium truncate">
+                      {subItem.label}
+                    </span>
+                    <span className="text-[8px] sm:text-[10px] opacity-60 truncate">
+                      {subItem.description}
+                    </span>
                   </div>
                 </Link>
               ))}
@@ -339,19 +503,24 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
       ) : (
         <Link
           to={item.path}
-          className={`group flex items-center gap-2 sm:gap-3 no-underline rounded-xl sm:rounded-2xl mx-2 sm:mx-3 my-1 px-3 sm:px-4 py-2.5 sm:py-3 text-white/85 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] hover:bg-white/6 hover:text-white hover:pl-4 sm:hover:pl-5 relative overflow-hidden before:absolute before:left-0 before:top-0 before:w-0.5 sm:before:w-1 before:h-full before:bg-gradient-to-b before:from-teal-400 before:to-cyan-400 before:scale-y-0 before:transition-transform before:duration-300 hover:before:scale-y-100 ${location.pathname === item.path
-              ? 'bg-gradient-to-r from-teal-400/20 to-teal-400/5 text-white border-l-2 sm:border-l-4 border-teal-400 rounded-l-xl'
-              : ''
-            }`}
+          className={`group flex items-center gap-2 sm:gap-3 no-underline rounded-xl sm:rounded-2xl mx-2 sm:mx-3 my-1 px-3 sm:px-4 py-2.5 sm:py-3 text-white/85 transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] hover:bg-white/6 hover:text-white hover:pl-4 sm:hover:pl-5 relative overflow-hidden before:absolute before:left-0 before:top-0 before:w-0.5 sm:before:w-1 before:h-full before:bg-gradient-to-b before:from-teal-400 before:to-cyan-400 before:scale-y-0 before:transition-transform before:duration-300 hover:before:scale-y-100 ${
+            location.pathname === item.path
+              ? "bg-gradient-to-r from-teal-400/20 to-teal-400/5 text-white border-l-2 sm:border-l-4 border-teal-400 rounded-l-xl"
+              : ""
+          }`}
           onClick={handleLinkClick}
         >
           <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-[38px] md:h-[38px] rounded-xl flex items-center justify-center transition-all duration-300 bg-white/5 text-white/90 group-hover:bg-teal-400/30 group-hover:text-teal-300 text-base sm:text-lg shrink-0">
             {item.icon}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="font-semibold text-xs sm:text-sm truncate">{item.label}</span>
+            <span className="font-semibold text-xs sm:text-sm truncate">
+              {item.label}
+            </span>
             {item.description && (
-              <span className="text-[9px] sm:text-xs opacity-60 truncate">{item.description}</span>
+              <span className="text-[9px] sm:text-xs opacity-60 truncate">
+                {item.description}
+              </span>
             )}
           </div>
         </Link>
@@ -361,8 +530,9 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{
-        __html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
           @keyframes slideInSidebar {
             from { transform: translateX(-100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
@@ -388,21 +558,31 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
           .sidebar-scroll::-webkit-scrollbar-thumb:hover {
             background: rgba(20, 184, 166, 0.6);
           }
-        `
-      }} />
+        `,
+        }}
+      />
 
       <div
-        className={`fixed h-screen flex flex-col transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] z-[1100] bg-gradient-to-br from-teal-900 via-teal-800 to-teal-900 shadow-[20px_0_40px_rgba(0,77,77,0.25)] border-r border-white/10 animate-[slideInSidebar_0.5s_cubic-bezier(0.2,0.9,0.4,1)] ${isMobile ? 'w-[280px] sm:w-[300px]' : 'w-[260px] sm:w-[270px] md:w-[280px]'
-          } ${isOpen ? 'left-0' : isMobile ? '-left-[280px] sm:-left-[300px]' : '-left-[260px] sm:-left-[270px] md:-left-[280px]'}`}
+        className={`fixed h-screen flex flex-col transition-all duration-400 ease-[cubic-bezier(0.2,0.9,0.4,1)] z-[1100] bg-gradient-to-br from-teal-900 via-teal-800 to-teal-900 shadow-[20px_0_40px_rgba(0,77,77,0.25)] border-r border-white/10 animate-[slideInSidebar_0.5s_cubic-bezier(0.2,0.9,0.4,1)] ${
+          isMobile
+            ? "w-[280px] sm:w-[300px]"
+            : "w-[260px] sm:w-[270px] md:w-[280px]"
+        } ${isOpen ? "left-0" : isMobile ? "-left-[280px] sm:-left-[300px]" : "-left-[260px] sm:-left-[270px] md:-left-[280px]"}`}
       >
         {/* Premium Header with Close */}
         <div className="bg-white/5 border-b border-teal-400/20 backdrop-blur-sm flex items-center justify-between p-3 sm:p-4 shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 bg-light rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg shadow-teal-400/30 shrink-0">
-              <img src="/logo2.png" alt="Logo" className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7" />
+              <img
+                src="/logo2.png"
+                alt="Logo"
+                className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7"
+              />
             </div>
             <div className="min-w-0">
-              <h5 className="mb-0 font-bold text-white tracking-wide text-sm sm:text-base truncate">Pixelmindsolutions</h5>
+              <h5 className="mb-0 font-bold text-white tracking-wide text-sm sm:text-base truncate">
+                Pixelmindsolutions
+              </h5>
               <span className="bg-teal-400/25 px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-xs font-semibold tracking-wide text-teal-300 border border-teal-400/40 inline-block">
                 CRM
               </span>
@@ -420,13 +600,17 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
 
         {/* Scrollable Menu Area */}
         <div className="flex-grow overflow-y-auto overflow-x-hidden py-2 sm:py-3 sidebar-scroll">
-          {visibleMenuItems.map((item, index) => renderMenuItem(item, index, 'slideInSidebar'))}
+          {visibleMenuItems.map((item, index) =>
+            renderMenuItem(item, index, "slideInSidebar"),
+          )}
 
           {visibleBottomItems.length > 0 && (
             <>
               <div className="h-px bg-white/10 my-3 sm:my-5 mx-3 sm:mx-4" />
 
-              {visibleBottomItems.map((item, index) => renderMenuItem(item, index, 'slideInBottomSubmenu'))}
+              {visibleBottomItems.map((item, index) =>
+                renderMenuItem(item, index, "slideInBottomSubmenu"),
+              )}
             </>
           )}
 
@@ -439,8 +623,12 @@ const Sidebar = ({ isOpen, onLogout, isMobile, isTablet, onClose }) => {
               <MdLogout size={18} className="sm:text-[20px]" />
             </div>
             <div className="flex flex-col min-w-0">
-              <span className="font-bold text-red-300 text-xs sm:text-sm truncate">Logout</span>
-              <span className="text-[9px] sm:text-xs opacity-60 text-red-300/70 truncate">End session</span>
+              <span className="font-bold text-red-300 text-xs sm:text-sm truncate">
+                Logout
+              </span>
+              <span className="text-[9px] sm:text-xs opacity-60 text-red-300/70 truncate">
+                End session
+              </span>
             </div>
           </div>
         </div>

@@ -1,49 +1,52 @@
 // App.js
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import React, { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
 
-import Login from './components/views/Login';
-import StaffLogin from './components/views/StaffLogin';
-import DashboardLayout from './components/views/DashboardLayout';
-import Dashboard from './components/views/Dashboard';
-import Staff from './components/Employee/Staff';
-import AddStaff from './components/Employee/AddStaff';
-import Projects from './components/Projects/Projects';
-import AddProject from './components/Projects/AddProject';
-import AssignedWorks from './components/Tasks/AssignedWorks';
-import AddWorksheet from './components/Tasks/AddWorksheet';
-import EditStaff from './components/Employee/EditStaff';
-import EditProject from './components/Projects/EditProject';
-import EditWorksheet from './components/Tasks/EditWorksheet';
-import AddAttendance from './components/Attendance/AddAttendance';
-import AllStaffAttendance from './components/Attendance/ShowAttendance';
-import CreateInvoice from './components/Invoice/CreateInvoice';
-import ShowInvoices from './components/Invoice/ShowInvoices';
-import CreatePayslip from './components/Payslips/CreatePayslip';
-import ShowPayslips from './components/Payslips/ShowPayslips';
-import StaffDetails from './components/Employee/SingleStaff';
-import ProjectDetails from './components/Projects/SingleProject';
-import AdvancedInvoice from './components/Invoice/AdvaceInvoiceGenerator';
-import WorkSessionLive from './components/WorkSession/WorkSessionLive';
-import WorkSessionHistory from './components/WorkSession/WorkSessionHistory';
-import AddClient from './components/clients/AddClient';
-import EditClient from './components/clients/EditClient';
-import AllClients from './components/clients/AllClients';
-import SingleClient from './components/clients/SingleClient';
-import AddInstallment from './components/Installments/AddInstallments';
-import AddEmployeeAccess from './components/views/EmployeeAccess/AddEmployeeAccess';
-import EmployeeAccessList from './components/views/EmployeeAccess/AccessEmployee';
-import SingleEmployeeAccess from './components/views/EmployeeAccess/SingleEmployeeAccess';
-import DigitalMarketingPlans from './components/views/DigitalMarketingPlans';
-import CompanyInfo from './components/views/CampanyInfo';
-import SingleStaffAttendance from './components/Attendance/SingleStaffAttendance';
-import EditInvoice from './components/Invoice/EditInvoice';
-import EmployeeSalaryReport from './components/WorkSession/EmployeeSalaryReport';
+import Login from "./components/views/Login";
+import StaffLogin from "./components/views/StaffLogin";
+import DashboardLayout from "./components/views/DashboardLayout";
+import Dashboard from "./components/views/Dashboard";
+import Staff from "./components/Employee/Staff";
+import AddStaff from "./components/Employee/AddStaff";
+import Projects from "./components/Projects/Projects";
+import AddProject from "./components/Projects/AddProject";
+import AssignedWorks from "./components/Tasks/AssignedWorks";
+import AddWorksheet from "./components/Tasks/AddWorksheet";
+import EditStaff from "./components/Employee/EditStaff";
+import EditProject from "./components/Projects/EditProject";
+import EditWorksheet from "./components/Tasks/EditWorksheet";
+import AddAttendance from "./components/Attendance/AddAttendance";
+import AllStaffAttendance from "./components/Attendance/ShowAttendance";
+import CreateInvoice from "./components/Invoice/CreateInvoice";
+import ShowInvoices from "./components/Invoice/ShowInvoices";
+import CreatePayslip from "./components/Payslips/CreatePayslip";
+import ShowPayslips from "./components/Payslips/ShowPayslips";
+import StaffDetails from "./components/Employee/SingleStaff";
+import ProjectDetails from "./components/Projects/SingleProject";
+import AdvancedInvoice from "./components/Invoice/AdvaceInvoiceGenerator";
+import WorkSessionLive from "./components/WorkSession/WorkSessionLive";
+import WorkSessionHistory from "./components/WorkSession/WorkSessionHistory";
+import AddClient from "./components/clients/AddClient";
+import EditClient from "./components/clients/EditClient";
+import AllClients from "./components/clients/AllClients";
+import SingleClient from "./components/clients/SingleClient";
+import AddInstallment from "./components/Installments/AddInstallments";
+import AddEmployeeAccess from "./components/views/EmployeeAccess/AddEmployeeAccess";
+import EmployeeAccessList from "./components/views/EmployeeAccess/AccessEmployee";
+import SingleEmployeeAccess from "./components/views/EmployeeAccess/SingleEmployeeAccess";
+import DigitalMarketingPlans from "./components/views/DigitalMarketingPlans";
+import CompanyInfo from "./components/views/CampanyInfo";
+import SingleStaffAttendance from "./components/Attendance/SingleStaffAttendance";
+import EditInvoice from "./components/Invoice/EditInvoice";
+import EmployeeSalaryReport from "./components/WorkSession/EmployeeSalaryReport";
+import AddGroup from "./components/group&chats/AddGroup";
+import AllGroupList from "./components/group&chats/AllGroupList";
+import Chat from "./components/group&chats/Chat";
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(
-    !!sessionStorage.getItem("loginDetails")
+    !!sessionStorage.getItem("loginDetails"),
   );
 
   const handleLogin = () => {
@@ -51,7 +54,7 @@ function App() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('loginDetails');
+    sessionStorage.removeItem("loginDetails");
     setIsLoggedIn(false);
   };
 
@@ -59,14 +62,25 @@ function App() {
     <Routes>
       <Route
         path="/"
-        element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <Login onLogin={handleLogin} />}
+        element={
+          isLoggedIn ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
+            <Login onLogin={handleLogin} />
+          )
+        }
       />
 
-      <Route path='/staff-login' element={<StaffLogin onLogin={handleLogin} />} />
+      <Route
+        path="/staff-login"
+        element={<StaffLogin onLogin={handleLogin} />}
+      />
 
       <Route
         path="/"
-        element={<DashboardLayout isLoggedIn={isLoggedIn} onLogout={handleLogout} />}
+        element={
+          <DashboardLayout isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+        }
       >
         <Route path="dashboard" element={<Dashboard />} />
 
@@ -75,12 +89,12 @@ function App() {
         <Route path="staff/edit/:id" element={<EditStaff />} />
         <Route path="add-staff" element={<AddStaff />} />
 
-        <Route path='add-client' element={<AddClient />} />
-        <Route path='edit-client/:id' element={<EditClient />} />
-        <Route path='allclients' element={<AllClients />} />
-        <Route path='client/:id' element={<SingleClient />} />
+        <Route path="add-client" element={<AddClient />} />
+        <Route path="edit-client/:id" element={<EditClient />} />
+        <Route path="allclients" element={<AllClients />} />
+        <Route path="client/:id" element={<SingleClient />} />
 
-        <Route path='add-installment' element={<AddInstallment />} />
+        <Route path="add-installment" element={<AddInstallment />} />
 
         <Route path="add-project" element={<AddProject />} />
         <Route path="projects/:id" element={<ProjectDetails />} />
@@ -95,10 +109,11 @@ function App() {
         <Route path="attendance" element={<AllStaffAttendance />} />
         <Route path="attendance/:staffId" element={<SingleStaffAttendance />} />
 
-
-
         {/* <Route path="work-session-live" element={<WorkSessionLive />} /> */}
-        <Route path="work-session-live/:employeeId" element={<WorkSessionLive />} />
+        <Route
+          path="work-session-live/:employeeId"
+          element={<WorkSessionLive />}
+        />
         <Route path="work-session-history" element={<WorkSessionHistory />} />
         <Route path="work-session-reports" element={<EmployeeSalaryReport />} />
 
@@ -112,10 +127,20 @@ function App() {
 
         <Route path="add-employee-access" element={<AddEmployeeAccess />} />
         <Route path="employee-access" element={<EmployeeAccessList />} />
-        <Route path="employee-access/:staffId" element={<SingleEmployeeAccess />} />
+        <Route
+          path="employee-access/:staffId"
+          element={<SingleEmployeeAccess />}
+        />
 
-        <Route path='marketing-plans' element={<DigitalMarketingPlans />} />
-        <Route path='company-info' element={<CompanyInfo />} />
+        <Route path="marketing-plans" element={<DigitalMarketingPlans />} />
+        <Route path="company-info" element={<CompanyInfo />} />
+
+        {/* All Groups & Chats */}
+        
+        <Route path="/add-group" element={<AddGroup />} />
+        <Route path="/edit-group/:id" element={<AddGroup />} />
+        <Route path="/groups" element={<AllGroupList />} />
+        <Route path="/chat" element={<Chat />} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>

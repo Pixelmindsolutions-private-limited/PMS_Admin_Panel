@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { MdEmail, MdArrowBack } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../../utils/Auth';
+// import { API_BASE_URL } from '../../utils/Auth';
+
+const API_BASE_URL = "http://localhost:5000/api";
 
 const Login = ({ onLogin }) => {
   const navigate = useNavigate();
