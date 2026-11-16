@@ -4,8 +4,8 @@ import { io } from "socket.io-client";
 /* =====================================================================
    CONFIG  - change these two for staging / production
    ===================================================================== */
-export const API_ROOT = "http://localhost:5000/api";
-export const SOCKET_ROOT = "http://localhost:5000"; // socket namespace is /chat
+export const API_ROOT = "http://15.135.216.211:5000/api";
+export const SOCKET_ROOT = "http://15.135.216.211:5000"; // socket namespace is /chat
 
 /* =====================================================================
    AUTH  (token comes from sessionStorage "loginDetails")
