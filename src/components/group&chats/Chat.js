@@ -36,7 +36,7 @@ import { GROUP_STYLES, EMOJIS, Attachments } from "./ChatUi";
   FIT = height of the whole chat app. If your page has a top header,
   change it, e.g. "h-[calc(100dvh-64px)]".
 */
-const FIT = "h-[100dvh]";
+const FIT = "h-[80dvh]";
 const QUICK = ["👋 Hello!", "Good morning ☀️", "Can we talk?"];
 const GROUP_WINDOW_MS = 5 * 60 * 1000; // messages within 5 min by same sender are stacked
 const MAX_FILES = 10;
@@ -493,10 +493,10 @@ const AdminChat = () => {
                           <MdEdit size={14} /> Edit group &amp; add members
                         </button>
                       )}
-                      <button onClick={doLeave}
+                      {/* <button onClick={doLeave}
                         className="w-full h-8 rounded-md border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-bold flex items-center justify-center gap-1.5">
                         <MdExitToApp size={14} /> Leave group
-                      </button>
+                      </button> */}
                       {canManage && (
                         <button onClick={doDeleteGroup}
                           className="w-full h-8 rounded-md bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold flex items-center justify-center gap-1.5">

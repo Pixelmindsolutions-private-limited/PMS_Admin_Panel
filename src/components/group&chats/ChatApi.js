@@ -17,8 +17,8 @@ export const getLoginDetails = () => {
     return null;
   }
 };
-// export const getAuthToken = () => getLoginDetails()?.token || "";
-export const getAuthToken = () => "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZTA0ZDc5MTdhYTFjYWJjNzU2OGZmYiIsImFkbWluSWQiOiI2YWUwNGQ3OTE3YWExY2FiYzc1NjhmZmIiLCJlbWFpbCI6InZpamF5LnBpeGVsbWluZHNvbHV0aW9uc0BnbWFpbC5jb20iLCJyb2xlIjoiYWRtaW4iLCJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3OTQ4MDY2NTUsImV4cCI6MTc5NTQxMTQ1NX0.B70fuXCglLrj3V_j1ljdMyNcdcBDDG0jJL7Ar5JfxFQ";
+export const getAuthToken = () => getLoginDetails()?.token || "";
+// export const getAuthToken = () => "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhZTA0ZDc5MTdhYTFjYWJjNzU2OGZmYiIsImFkbWluSWQiOiI2YWUwNGQ3OTE3YWExY2FiYzc1NjhmZmIiLCJlbWFpbCI6InZpamF5LnBpeGVsbWluZHNvbHV0aW9uc0BnbWFpbC5jb20iLCJyb2xlIjoiYWRtaW4iLCJ0eXBlIjoiYWRtaW4iLCJpYXQiOjE3OTQ4MDY2NTUsImV4cCI6MTc5NTQxMTQ1NX0.B70fuXCglLrj3V_j1ljdMyNcdcBDDG0jJL7Ar5JfxFQ";
 
 const decodeJwt = (token) => {
   try {

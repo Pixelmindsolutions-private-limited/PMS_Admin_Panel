@@ -17,9 +17,9 @@ const Login = ({ onLogin }) => {
   const [otpError, setOtpError] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
 
-  // Load saved email from localStorage on component mount
+  // Load saved email from sessionStorage on component mount
   useEffect(() => {
-    const savedEmail = localStorage.getItem('rememberedEmail');
+    const savedEmail = sessionStorage.getItem('rememberedEmail');
     if (savedEmail) {
       setFormData(prev => ({
         ...prev,
@@ -109,11 +109,11 @@ const Login = ({ onLogin }) => {
         token: data.data.token || null,
       }));
 
-      // Save email to localStorage if remember me is checked
+      // Save email to sessionStorage if remember me is checked
       if (formData.rememberMe) {
-        localStorage.setItem('rememberedEmail', formData.email);
+        sessionStorage.setItem('rememberedEmail', formData.email);
       } else {
-        localStorage.removeItem('rememberedEmail');
+        sessionStorage.removeItem('rememberedEmail');
       }
 
       console.log("Login Successful:", data);

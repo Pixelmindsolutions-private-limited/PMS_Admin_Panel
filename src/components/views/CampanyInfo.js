@@ -50,17 +50,17 @@ const CompanyInfo = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
 
-  // Fetch company info from localStorage
+  // Fetch company info from sessionStorage
   const fetchCompanyInfo = () => {
     setLoading(true);
     setError(null);
     try {
-      // Get company info from localStorage
-      const storedData = localStorage.getItem('companyInfo');
+      // Get company info from sessionStorage
+      const storedData = sessionStorage.getItem('companyInfo');
       
       if (storedData) {
         const parsedData = JSON.parse(storedData);
-        console.log("Company info from localStorage:", parsedData);
+        console.log("Company info from sessionStorage:", parsedData);
         
         setCompanyInfo(parsedData);
         setFormData({
@@ -86,7 +86,7 @@ const CompanyInfo = () => {
           role: 'CEO',
           logo: null
         };
-        localStorage.setItem('companyInfo', JSON.stringify(defaultData));
+        sessionStorage.setItem('companyInfo', JSON.stringify(defaultData));
         setCompanyInfo(defaultData);
         setFormData(defaultData);
         setLogoPreview(null);
@@ -172,8 +172,8 @@ const CompanyInfo = () => {
         updatedAt: new Date().toISOString()
       };
 
-      // Save to localStorage
-      localStorage.setItem('companyInfo', JSON.stringify(dataToSave));
+      // Save to sessionStorage
+      sessionStorage.setItem('companyInfo', JSON.stringify(dataToSave));
       
       // Update state
       setCompanyInfo(dataToSave);
@@ -202,8 +202,8 @@ const CompanyInfo = () => {
         logo: null
       };
       
-      // Save to localStorage
-      localStorage.setItem('companyInfo', JSON.stringify(updatedData));
+      // Save to sessionStorage
+      sessionStorage.setItem('companyInfo', JSON.stringify(updatedData));
       
       // Update state
       setCompanyInfo(updatedData);

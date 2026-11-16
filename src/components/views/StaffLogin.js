@@ -10,10 +10,10 @@ const StaffLogin = ({ onLogin }) => {
   const [focusedField, setFocusedField] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Load saved credentials from localStorage on component mount
+  // Load saved credentials from sessionStorage on component mount
   useEffect(() => {
-    const savedEmail = localStorage.getItem('staffRememberedEmail');
-    const savedPassword = localStorage.getItem('staffRememberedPassword');
+    const savedEmail = sessionStorage.getItem('staffRememberedEmail');
+    const savedPassword = sessionStorage.getItem('staffRememberedPassword');
     if (savedEmail && savedPassword) {
       setFormData(prev => ({
         ...prev,
@@ -71,13 +71,13 @@ const StaffLogin = ({ onLogin }) => {
         })
       );
 
-      // Save credentials to localStorage if remember me is checked
+      // Save credentials to sessionStorage if remember me is checked
       if (formData.rememberMe) {
-        localStorage.setItem('staffRememberedEmail', formData.email);
-        localStorage.setItem('staffRememberedPassword', formData.password);
+        sessionStorage.setItem('staffRememberedEmail', formData.email);
+        sessionStorage.setItem('staffRememberedPassword', formData.password);
       } else {
-        localStorage.removeItem('staffRememberedEmail');
-        localStorage.removeItem('staffRememberedPassword');
+        sessionStorage.removeItem('staffRememberedEmail');
+        sessionStorage.removeItem('staffRememberedPassword');
       }
 
       console.log("Staff Login Successful:", data);
